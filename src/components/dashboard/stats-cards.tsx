@@ -7,7 +7,7 @@ import { Card } from "@/components/ui";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
-// ─── Mini SVG Sparkline Component ───
+// ─── Enhanced SVG Sparkline Component (Larger & Taller with glowing target dot) ───
 function Sparkline({
   points,
   color = "#22c55e",
@@ -20,41 +20,57 @@ function Sparkline({
   const min = Math.min(...points);
   const max = Math.max(...points);
   const range = max - min || 1;
-  const width = 44;
-  const height = 20;
-  const padding = 2;
+  const width = 64;
+  const height = 32;
+  const paddingX = 3;
+  const paddingTop = 4;
+  const paddingBottom = 4;
 
   const coords = points.map((p, i) => {
-    const x = padding + (i / (points.length - 1)) * (width - padding * 2);
-    const y = height - padding - ((p - min) / range) * (height - padding * 2);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
+    const x = paddingX + (i / (points.length - 1)) * (width - paddingX * 2);
+    const y =
+      height -
+      paddingBottom -
+      ((p - min) / range) * (height - paddingTop - paddingBottom);
+    return { x: Number(x.toFixed(1)), y: Number(y.toFixed(1)) };
   });
 
-  const pathD = `M ${coords.join(" L ")}`;
-  const areaD = `${pathD} L ${(width - padding).toFixed(1)},${height} L ${padding},${height} Z`;
+  const pathD = `M ${coords.map((c) => `${c.x},${c.y}`).join(" L ")}`;
+  const lastPoint = coords[coords.length - 1];
+  const areaD = `${pathD} L ${(width - paddingX).toFixed(1)},${height} L ${paddingX},${height} Z`;
 
   return (
     <svg width={width} height={height} className="overflow-visible shrink-0">
       <defs>
         <linearGradient id={`grad-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.35} />
           <stop offset="100%" stopColor={color} stopOpacity={0.0} />
         </linearGradient>
       </defs>
+      {/* Area fill */}
       <path d={areaD} fill={`url(#grad-${id})`} />
+      {/* Main sparkline */}
       <path
         d={pathD}
         fill="none"
         stroke={color}
-        strokeWidth="1.8"
+        strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+      {/* Target indicator point at current status */}
+      <circle
+        cx={lastPoint.x}
+        cy={lastPoint.y}
+        r="2.8"
+        fill={color}
+        className="filter drop-shadow-[0_0_4px_rgba(255,255,255,0.4)]"
       />
     </svg>
   );
 }
 
-// ─── Mini Semicircle Gauge Component (ครึ่งวงกลม) ───
+// ─── Enhanced Semicircle Gauge Component (Larger, Thicker & More Prominent) ───
 function SemicircleGauge({
   percent = 65,
   color = "#22c55e",
@@ -62,38 +78,41 @@ function SemicircleGauge({
   percent: number;
   color?: string;
 }) {
-  const radius = 13;
-  const circumference = Math.PI * radius; // length of semicircle arc ~40.84
+  const radius = 20;
+  const circumference = Math.PI * radius; // length of half circle ~62.83
   const clamped = Math.min(Math.max(percent, 0), 100);
   const strokeDashoffset = circumference - (clamped / 100) * circumference;
 
   return (
     <svg
-      width="34"
-      height="19"
-      viewBox="0 0 34 19"
+      width="52"
+      height="30"
+      viewBox="0 0 52 30"
       className="shrink-0 overflow-visible"
     >
       {/* Background Track Arc */}
       <path
-        d="M 4,17 A 13,13 0 0,1 30,17"
+        d="M 6,26 A 20,20 0 0,1 46,26"
         fill="none"
         stroke="currentColor"
         className="text-[var(--border-primary)]"
-        strokeWidth="2.8"
+        strokeWidth="4"
         strokeLinecap="round"
         opacity="0.5"
       />
       {/* Foreground Progress Arc */}
       <path
-        d="M 4,17 A 13,13 0 0,1 30,17"
+        d="M 6,26 A 20,20 0 0,1 46,26"
         fill="none"
         stroke={color}
-        strokeWidth="2.8"
+        strokeWidth="4"
         strokeDasharray={circumference}
         strokeDashoffset={strokeDashoffset}
         strokeLinecap="round"
         className="transition-all duration-500 ease-out"
+        style={{
+          filter: `drop-shadow(0 0 4px ${color}50)`,
+        }}
       />
     </svg>
   );
@@ -174,7 +193,7 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
       {items.map((item, i) => (
         <motion.div
           key={item.id}
@@ -182,25 +201,29 @@ export function StatsCards() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: i * 0.03 }}
         >
-          <Card className="p-3 glass-card flex flex-col justify-between h-full">
+          <Card className="p-4 glass-card flex flex-col justify-between min-h-[96px]">
             {/* Header: Label + Trend Icon */}
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] truncate">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] truncate">
                 {item.label}
-              </p>
+              </span>
               {item.trend === "up" && (
-                <TrendingUp size={12} className="text-profit shrink-0" />
+                <span className="flex items-center text-profit bg-profit/10 p-1 rounded-md">
+                  <TrendingUp size={13} />
+                </span>
               )}
               {item.trend === "down" && (
-                <TrendingDown size={12} className="text-loss shrink-0" />
+                <span className="flex items-center text-loss bg-loss/10 p-1 rounded-md">
+                  <TrendingDown size={13} />
+                </span>
               )}
             </div>
 
-            {/* Value + Visual (Sparkline or Semicircle) */}
-            <div className="mt-1.5 flex items-end justify-between gap-1.5">
+            {/* Bottom Row: Large Value on Left, Enlarged Sparkline / Gauge on Right */}
+            <div className="mt-2 flex items-end justify-between gap-2">
               <span
                 className={cn(
-                  "text-sm sm:text-base font-bold font-mono tracking-tight",
+                  "text-lg sm:text-xl xl:text-[22px] font-bold font-mono tracking-tight",
                   item.trend === "up" && "text-profit",
                   item.trend === "down" && "text-loss",
                   item.trend === "neutral" && "text-[var(--text-primary)]"
@@ -209,7 +232,7 @@ export function StatsCards() {
                 {item.value}
               </span>
 
-              {/* Visual Indicator: Sparkline vs Semicircle Gauge */}
+              {/* Enlarged Visual Indicator */}
               <div className="shrink-0 mb-0.5">
                 {item.visualType === "sparkline" ? (
                   <Sparkline
