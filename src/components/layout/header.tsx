@@ -21,7 +21,6 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/history", label: "History", icon: History },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/gallery", label: "Gallery", icon: Image },
