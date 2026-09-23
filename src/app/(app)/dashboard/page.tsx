@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { DashboardCalendar } from "@/components/dashboard/dashboard-calendar";
 import { StatisticsCard } from "@/components/dashboard/statistics-card";
 import { EquityCurveCard } from "@/components/dashboard/equity-curve-card";
-import { DashboardCalendar } from "@/components/dashboard/dashboard-calendar";
 import { DailyPnlChart } from "@/components/dashboard/daily-pnl-chart";
 import { HourlyHeatmap } from "@/components/dashboard/hourly-heatmap";
 import { InstrumentsCard } from "@/components/dashboard/instruments-card";
@@ -16,12 +16,22 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
         {/* Left Section (8 cols): Complete Trading Performance & Calendar Flow */}
         <div className="lg:col-span-8 xl:col-span-8 flex flex-col gap-5">
-          {/* 1. Top Row: Statistics (4 Quadrants) | Equity Curve Card */}
+          {/* 1. TOP ROW: Full Trading Calendar at the Very Top */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
+          >
+            <DashboardCalendar />
+          </motion.div>
+
+          {/* 2. Row: Statistics (4 Quadrants) | Equity Curve Card */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.3, delay: 0.05 }}
               className="md:col-span-5 h-full"
             >
               <StatisticsCard />
@@ -30,22 +40,12 @@ export default function DashboardPage() {
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: 0.05 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
               className="md:col-span-7 h-full"
             >
               <EquityCurveCard period="month" />
             </motion.div>
           </div>
-
-          {/* 2. Full Trading Calendar directly embedded on the First Page */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="w-full"
-          >
-            <DashboardCalendar />
-          </motion.div>
 
           {/* 3. Performance Insights: Instruments Breakdown | Daily P&L Bar Chart */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
