@@ -22,7 +22,7 @@ export function DailyPnlChart({ height = 180 }: { height?: number }) {
         day: "numeric",
       }),
       pnl: d.netPnl,
-      trades: d.tradesCount,
+      trades: d.tradeCount,
     }));
   }, []);
 

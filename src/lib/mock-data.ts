@@ -344,6 +344,7 @@ export const mockDailyStats: DailyStats[] = [
   { date: "2026-09-20", netPnl: 675, netPnlPercent: 0.68, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 2.13, maxDrawdown: 0 },
   { date: "2026-09-21", netPnl: -195, netPnlPercent: -0.2, tradeCount: 1, wins: 0, losses: 1, profitFactor: 0, avgRR: 0, maxDrawdown: 195 },
   { date: "2026-09-22", netPnl: 1155, netPnlPercent: 1.16, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 1.9, maxDrawdown: 0 },
+  { date: "2026-09-23", netPnl: 480, netPnlPercent: 0.48, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 2.2, maxDrawdown: 0 },
 ];
 
 // ─── Aggregate Stats ───

@@ -13,13 +13,15 @@ export function StatisticsCard() {
 
   // Multiplier adjustments based on timeframe for realistic demonstration
   const mult = period === "today" ? 0.35 : period === "week" ? 0.65 : period === "month" ? 0.9 : 1.0;
-  const grossProfit = stats.grossProfit * mult;
-  const grossLoss = stats.grossLoss * mult;
+  const grossProfit = 6840 * mult;
+  const grossLoss = 1976 * mult;
   const netPnl = grossProfit - grossLoss;
   const totalTrades = Math.max(1, Math.round(stats.totalTrades * mult));
   const wins = Math.max(1, Math.round(stats.wins * mult));
   const losses = Math.max(0, totalTrades - wins);
   const winRate = Number(((wins / totalTrades) * 100).toFixed(1));
+  const avgWin = 402.35;
+  const avgLoss = 219.55;
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-[var(--border-primary)] shadow-sm flex flex-col justify-between h-full">
@@ -100,13 +102,13 @@ export function StatisticsCard() {
             <div className="flex justify-between items-center">
               <span className="text-[var(--text-secondary)]">Avg win</span>
               <span className="font-mono font-semibold text-profit">
-                {formatCurrency(stats.avgWin)}
+                {formatCurrency(avgWin)}
               </span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-[var(--text-secondary)]">Avg loss</span>
               <span className="font-mono font-semibold text-loss">
-                {formatCurrency(-stats.avgLoss)}
+                {formatCurrency(-avgLoss)}
               </span>
             </div>
             <div className="flex justify-between items-center">
