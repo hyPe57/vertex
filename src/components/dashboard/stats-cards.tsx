@@ -58,22 +58,22 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
       {items.map((item, i) => (
         <motion.div
           key={item.label}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: i * 0.05 }}
+          transition={{ duration: 0.25, delay: i * 0.03 }}
         >
-          <Card className="p-4">
-            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+          <Card className="p-3 glass-card">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] truncate">
               {item.label}
             </p>
-            <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="mt-1 flex items-center justify-between">
               <span
                 className={cn(
-                  "text-lg font-semibold font-mono",
+                  "text-sm sm:text-base font-semibold font-mono truncate",
                   item.trend === "up" && "text-profit",
                   item.trend === "down" && "text-loss",
                   item.trend === "neutral" && "text-[var(--text-primary)]"
@@ -82,10 +82,10 @@ export function StatsCards() {
                 {item.value}
               </span>
               {item.trend === "up" && (
-                <TrendingUp size={14} className="text-profit" />
+                <TrendingUp size={13} className="text-profit shrink-0 ml-1" />
               )}
               {item.trend === "down" && (
-                <TrendingDown size={14} className="text-loss" />
+                <TrendingDown size={13} className="text-loss shrink-0 ml-1" />
               )}
             </div>
           </Card>
