@@ -326,25 +326,9 @@ export const mockTrades: Trade[] = [
 // ─── Daily Stats (September 2026) ───
 
 export const mockDailyStats: DailyStats[] = [
-  { date: "2026-09-01", netPnl: 320, netPnlPercent: 0.32, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 1.8, maxDrawdown: 0 },
-  { date: "2026-09-02", netPnl: -150, netPnlPercent: -0.15, tradeCount: 3, wins: 1, losses: 2, profitFactor: 0.6, avgRR: 1.2, maxDrawdown: 200 },
-  { date: "2026-09-03", netPnl: 540, netPnlPercent: 0.54, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 2.1, maxDrawdown: 0 },
-  { date: "2026-09-04", netPnl: 0, netPnlPercent: 0, tradeCount: 0, wins: 0, losses: 0, profitFactor: 0, avgRR: 0, maxDrawdown: 0 },
-  { date: "2026-09-05", netPnl: -280, netPnlPercent: -0.28, tradeCount: 4, wins: 1, losses: 3, profitFactor: 0.4, avgRR: 0.9, maxDrawdown: 350 },
-  { date: "2026-09-08", netPnl: 450, netPnlPercent: 0.45, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 2.3, maxDrawdown: 0 },
-  { date: "2026-09-09", netPnl: 180, netPnlPercent: 0.18, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 1.5, maxDrawdown: 0 },
-  { date: "2026-09-10", netPnl: -90, netPnlPercent: -0.09, tradeCount: 2, wins: 0, losses: 2, profitFactor: 0, avgRR: 0, maxDrawdown: 120 },
-  { date: "2026-09-11", netPnl: 720, netPnlPercent: 0.72, tradeCount: 3, wins: 3, losses: 0, profitFactor: 999, avgRR: 2.5, maxDrawdown: 0 },
-  { date: "2026-09-12", netPnl: 350, netPnlPercent: 0.35, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 2.0, maxDrawdown: 0 },
-  { date: "2026-09-15", netPnl: -60, netPnlPercent: -0.06, tradeCount: 1, wins: 0, losses: 1, profitFactor: 0, avgRR: 0, maxDrawdown: 60 },
-  { date: "2026-09-16", netPnl: 125, netPnlPercent: 0.13, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 1.4, maxDrawdown: 0 },
-  { date: "2026-09-17", netPnl: 890, netPnlPercent: 0.89, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 2.5, maxDrawdown: 0 },
-  { date: "2026-09-18", netPnl: -180, netPnlPercent: -0.18, tradeCount: 1, wins: 0, losses: 1, profitFactor: 0, avgRR: 0, maxDrawdown: 180 },
-  { date: "2026-09-19", netPnl: 424, netPnlPercent: 0.42, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 2.0, maxDrawdown: 0 },
-  { date: "2026-09-20", netPnl: 675, netPnlPercent: 0.68, tradeCount: 1, wins: 1, losses: 0, profitFactor: 999, avgRR: 2.13, maxDrawdown: 0 },
-  { date: "2026-09-21", netPnl: -195, netPnlPercent: -0.2, tradeCount: 1, wins: 0, losses: 1, profitFactor: 0, avgRR: 0, maxDrawdown: 195 },
-  { date: "2026-09-22", netPnl: 1155, netPnlPercent: 1.16, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 1.9, maxDrawdown: 0 },
-  { date: "2026-09-23", netPnl: 480, netPnlPercent: 0.48, tradeCount: 2, wins: 2, losses: 0, profitFactor: 999, avgRR: 2.2, maxDrawdown: 0 },
+  { date: "2026-09-03", netPnl: 66.79, netPnlPercent: 0.07, tradeCount: 6, wins: 4, losses: 2, profitFactor: 1.8, avgRR: 1.9, maxDrawdown: 50 },
+  { date: "2026-09-04", netPnl: -545.27, netPnlPercent: -0.55, tradeCount: 20, wins: 6, losses: 14, profitFactor: 0.5, avgRR: 1.1, maxDrawdown: 600 },
+  { date: "2026-09-05", netPnl: 603.00, netPnlPercent: 0.60, tradeCount: 6, wins: 4, losses: 2, profitFactor: 4.2, avgRR: 2.3, maxDrawdown: 80 },
 ];
 
 // ─── Aggregate Stats ───
