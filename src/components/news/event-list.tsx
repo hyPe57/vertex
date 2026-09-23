@@ -65,8 +65,8 @@ export function EventList() {
               {format(dateObj, "EEEE, MMMM d, yyyy")}
             </h3>
             
-            <div className="glass-card rounded-xl overflow-hidden border border-border/50">
-              <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-muted/20 text-xs font-semibold text-muted-foreground border-b border-border/50">
+            <div className="rounded-2xl overflow-hidden border border-white/[0.04] bg-[#0c0d14]/75 shadow-xs">
+              <div className="grid grid-cols-12 gap-4 px-4 py-3 bg-white/[0.02] text-xs font-semibold text-zinc-400 border-b border-white/[0.035]">
                 <div className="col-span-2 md:col-span-1">Time</div>
                 <div className="col-span-2 md:col-span-1">Cur</div>
                 <div className="col-span-1 md:col-span-1 text-center">Imp</div>
@@ -89,7 +89,7 @@ export function EventList() {
                       transition={{ delay: i * 0.02 }}
                       key={event.id}
                       className={cn(
-                        "grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm border-b border-border/20 last:border-0 hover:bg-muted/10 transition-colors",
+                        "grid grid-cols-12 gap-4 px-4 py-3 items-center text-sm border-b border-white/[0.025] last:border-0 hover:bg-white/[0.02] transition-colors",
                         past ? "opacity-60" : "opacity-100",
                         upcomingSoon ? "bg-brand-500/5 shadow-[inset_2px_0_0_rgba(var(--brand-500),1)]" : ""
                       )}

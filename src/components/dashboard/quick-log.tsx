@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { cn, calculateRR, getEmotionLabel, getEmotionColor } from "@/lib/utils";
 import { mockTags } from "@/lib/mock-data";
 import { Card, Button } from "@/components/ui";
-import { UploadCloud, Zap } from "lucide-react";
+import { UploadCloud, Zap, X, Plus, Tag as TagIcon } from "lucide-react";
 
 const emotionColors = [
   "bg-red-500",
@@ -25,7 +25,13 @@ export function QuickLog() {
   const [lotSize, setLotSize] = useState("");
   const [emotion, setEmotion] = useState<number | null>(4);
   const [notes, setNotes] = useState("");
+
+  // Tag management matching History edit drawer
   const [selectedTags, setSelectedTags] = useState<string[]>(["Breakout"]);
+  const [availableTags, setAvailableTags] = useState<string[]>(
+    mockTags.map((t) => t.name)
+  );
+  const [newTagInput, setNewTagInput] = useState("");
 
   const rr =
     entry && sl && tp && direction
@@ -43,6 +49,22 @@ export function QuickLog() {
     );
   };
 
+  const handleAddTag = () => {
+    const trimmed = newTagInput.trim().replace(/^#/, "");
+    if (!trimmed) return;
+    if (!availableTags.includes(trimmed)) {
+      setAvailableTags((prev) => [...prev, trimmed]);
+    }
+    if (!selectedTags.includes(trimmed)) {
+      setSelectedTags((prev) => [...prev, trimmed]);
+    }
+    setNewTagInput("");
+  };
+
+  const handleRemoveTag = (tagName: string) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tagName));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -50,7 +72,7 @@ export function QuickLog() {
       transition={{ duration: 0.35, delay: 0.1 }}
       className="w-full"
     >
-      <Card className="p-5 glass-card flex flex-col gap-4">
+      <Card className="p-5 glass-card flex flex-col gap-4 border border-white/[0.04] bg-[#0c0d14]/75 shadow-xs">
         {/* Header */}
         <div className="flex items-center justify-between pb-1">
           <div className="flex items-center gap-2">
@@ -68,7 +90,42 @@ export function QuickLog() {
           )}
         </div>
 
-        {/* Asset & Direction Row */}
+        {/* 1. TRADING MOOD (Placed ABOVE Asset & Direction as requested) */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+              Trading Mood
+            </label>
+            {emotion && (
+              <span
+                className="text-[11px] font-medium"
+                style={{ color: getEmotionColor(emotion) }}
+              >
+                {getEmotionLabel(emotion)}
+              </span>
+            )}
+          </div>
+          <div className="flex h-7 rounded-lg overflow-hidden border border-white/[0.05] bg-white/[0.02]">
+            {[1, 2, 3, 4, 5].map((level) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => setEmotion(level)}
+                className={cn(
+                  "flex-1 transition-all duration-150",
+                  emotionColors[level - 1],
+                  emotion === level
+                    ? "opacity-100 shadow-inner"
+                    : emotion
+                    ? "opacity-25 hover:opacity-60"
+                    : "opacity-40 hover:opacity-75"
+                )}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* 2. Asset & Direction Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
@@ -80,7 +137,7 @@ export function QuickLog() {
                 value={asset}
                 onChange={(e) => setAsset(e.target.value)}
                 placeholder="XAUUSD"
-                className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors uppercase"
+                className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors uppercase"
               />
               {!asset && (
                 <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] italic pointer-events-none">
@@ -94,7 +151,7 @@ export function QuickLog() {
             <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
               Direction
             </label>
-            <div className="flex h-8 rounded-lg p-0.5 bg-[var(--bg-secondary)] border border-[var(--border-primary)]">
+            <div className="flex h-8 rounded-lg p-0.5 bg-white/[0.02] border border-white/[0.05]">
               <button
                 type="button"
                 onClick={() => setDirection("long")}
@@ -123,7 +180,7 @@ export function QuickLog() {
           </div>
         </div>
 
-        {/* Entry & Exit Prices */}
+        {/* 3. Entry & Exit Prices */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
@@ -135,7 +192,7 @@ export function QuickLog() {
               value={entry}
               onChange={(e) => setEntry(e.target.value)}
               placeholder="2650.50"
-              className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
             />
           </div>
           <div>
@@ -148,12 +205,12 @@ export function QuickLog() {
               value={exit}
               onChange={(e) => setExit(e.target.value)}
               placeholder="2668.20"
-              className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
             />
           </div>
         </div>
 
-        {/* Stop Loss & Take Profit */}
+        {/* 4. Stop Loss & Take Profit */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
@@ -165,7 +222,7 @@ export function QuickLog() {
               value={sl}
               onChange={(e) => setSl(e.target.value)}
               placeholder="2642.00"
-              className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
             />
           </div>
           <div>
@@ -178,12 +235,12 @@ export function QuickLog() {
               value={tp}
               onChange={(e) => setTp(e.target.value)}
               placeholder="2670.00"
-              className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
             />
           </div>
         </div>
 
-        {/* Lot Size & Auto RR Summary */}
+        {/* 5. Lot Size & Auto RR Summary */}
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
             <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
@@ -195,7 +252,7 @@ export function QuickLog() {
               value={lotSize}
               onChange={(e) => setLotSize(e.target.value)}
               placeholder="0.50"
-              className="w-full h-8 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
             />
           </div>
           <div className="h-8 flex items-center justify-between px-2.5 rounded-lg bg-brand-500/5 border border-brand-500/20">
@@ -206,66 +263,93 @@ export function QuickLog() {
           </div>
         </div>
 
-        {/* Emotion Gauge */}
+        {/* 6. TAGS (Interactive Edit, Add & Remove matching History Drawer) */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-              Trading Mood
-            </label>
-            {emotion && (
-              <span
-                className="text-[11px] font-medium"
-                style={{ color: getEmotionColor(emotion) }}
-              >
-                {getEmotionLabel(emotion)}
+            <div className="flex items-center gap-1.5">
+              <TagIcon size={12} className="text-[var(--text-tertiary)]" />
+              <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+                Tags
+              </label>
+            </div>
+            {selectedTags.length > 0 && (
+              <span className="text-[10px] text-zinc-500">
+                {selectedTags.length} selected
               </span>
             )}
           </div>
-          <div className="flex h-7 rounded-lg overflow-hidden border border-[var(--border-primary)]">
-            {[1, 2, 3, 4, 5].map((level) => (
-              <button
-                key={level}
-                type="button"
-                onClick={() => setEmotion(level)}
-                className={cn(
-                  "flex-1 transition-all duration-150",
-                  emotionColors[level - 1],
-                  emotion === level
-                    ? "opacity-100 shadow-inner"
-                    : emotion
-                    ? "opacity-25 hover:opacity-60"
-                    : "opacity-40 hover:opacity-75"
-                )}
-              />
-            ))}
+
+          {/* Active Tags with Delete 'X' */}
+          {selectedTags.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {selectedTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-brand-500/15 text-brand-400 border border-brand-500/30"
+                >
+                  #{tag}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTag(tag)}
+                    className="hover:text-rose-400 text-brand-400/80 p-0.5 transition-colors"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Add New Tag Input matching History Drawer */}
+          <div className="flex items-center gap-1.5 mb-2">
+            <input
+              type="text"
+              value={newTagInput}
+              onChange={(e) => setNewTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddTag();
+                }
+              }}
+              placeholder="Add tag and press Enter..."
+              className="flex-1 h-7.5 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors"
+            />
+            <button
+              type="button"
+              onClick={handleAddTag}
+              disabled={!newTagInput.trim()}
+              className="h-7.5 px-2.5 rounded-lg bg-brand-500/15 text-brand-400 hover:bg-brand-500/25 border border-brand-500/30 text-xs font-semibold flex items-center gap-1 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+            >
+              <Plus size={11} />
+              <span>Add</span>
+            </button>
+          </div>
+
+          {/* Tag Quick Suggestions */}
+          <div className="flex flex-wrap gap-1">
+            {availableTags.map((tagName) => {
+              const isSelected = selectedTags.includes(tagName);
+              return (
+                <button
+                  key={tagName}
+                  type="button"
+                  onClick={() => toggleTag(tagName)}
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-150 border cursor-pointer",
+                    isSelected
+                      ? "border-brand-500/50 bg-brand-500/20 text-brand-300 font-semibold"
+                      : "border-white/[0.04] bg-white/[0.02] text-zinc-400 hover:border-white/[0.1] hover:text-zinc-200"
+                  )}
+                >
+                  #{tagName}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Tags */}
-        <div>
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1.5">
-            Tags
-          </label>
-          <div className="flex flex-wrap gap-1.5">
-            {mockTags.slice(0, 6).map((tag) => (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => toggleTag(tag.name)}
-                className={cn(
-                  "px-2 py-0.5 rounded-full text-[11px] font-medium transition-all duration-150 border",
-                  selectedTags.includes(tag.name)
-                    ? "border-brand-500/50 bg-brand-500/15 text-brand-400"
-                    : "border-[var(--border-primary)] bg-[var(--bg-secondary)] text-[var(--text-tertiary)] hover:border-[var(--text-tertiary)]"
-                )}
-              >
-                #{tag.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Notes */}
+        {/* 7. Notes */}
         <div>
           <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
             Notes
@@ -275,13 +359,13 @@ export function QuickLog() {
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Trade reasoning, confluence, or mistakes..."
-            className="w-full bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors resize-none"
+            className="w-full bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors resize-none"
           />
         </div>
 
         {/* Screenshot Upload Dropzone */}
         <div>
-          <div className="border border-dashed border-[var(--border-primary)] rounded-lg py-2.5 px-3 flex items-center justify-center gap-2 text-[var(--text-tertiary)] hover:border-brand-500/40 hover:text-brand-500 transition-colors cursor-pointer bg-[var(--bg-secondary)]/50">
+          <div className="border border-dashed border-white/[0.06] rounded-lg py-2.5 px-3 flex items-center justify-center gap-2 text-[var(--text-tertiary)] hover:border-brand-500/40 hover:text-brand-500 transition-colors cursor-pointer bg-white/[0.01]">
             <UploadCloud size={16} className="opacity-70" />
             <span className="text-[11px]">Drop chart screenshot here</span>
           </div>

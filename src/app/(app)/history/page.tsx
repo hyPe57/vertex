@@ -52,19 +52,19 @@ export default function HistoryPage() {
           </p>
         </div>
         
-        <div className="flex items-center gap-2 bg-surface-100 dark:bg-surface-200 p-1 rounded-lg">
+        <div className="flex items-center gap-2 bg-white/[0.03] border border-white/[0.04] p-1 rounded-xl shadow-xs">
           <button
             onClick={() => setCurrencyDisplay("usd")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              currencyDisplay === "usd" ? "bg-[var(--bg-primary)] shadow-sm text-[var(--text-primary)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              currencyDisplay === "usd" ? "bg-white/[0.08] text-white shadow-xs" : "text-zinc-400 hover:text-white"
             }`}
           >
             $
           </button>
           <button
             onClick={() => setCurrencyDisplay("percent")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              currencyDisplay === "percent" ? "bg-[var(--bg-primary)] shadow-sm text-[var(--text-primary)]" : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+              currencyDisplay === "percent" ? "bg-white/[0.08] text-white shadow-xs" : "text-zinc-400 hover:text-white"
             }`}
           >
             %
@@ -73,7 +73,7 @@ export default function HistoryPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3 bg-[var(--bg-secondary)] border border-[var(--border-primary)] p-3 rounded-xl">
+      <div className="flex flex-wrap items-center gap-3 bg-[#0c0d14]/75 border border-white/[0.04] p-3 rounded-2xl shadow-xs">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--text-tertiary)]" />
           <Input 

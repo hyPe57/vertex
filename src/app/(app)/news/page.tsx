@@ -21,8 +21,8 @@ export default function NewsPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 glass-card rounded-xl border border-border/50">
-        <div className="flex items-center gap-4 overflow-x-auto w-full md:w-auto pb-2 md:pb-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 p-4 rounded-2xl border border-white/[0.04] bg-[#0c0d14]/75 shadow-xs">
+        <div className="flex items-center gap-4 overflow-x-auto no-scrollbar w-full md:w-auto pb-2 md:pb-0">
           <div className="flex items-center gap-2 text-sm">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <span className="text-muted-foreground font-medium">Impact:</span>
@@ -49,7 +49,7 @@ export default function NewsPage() {
             </div>
           </div>
           
-          <div className="w-px h-6 bg-border/50 hidden md:block" />
+          <div className="w-px h-5 bg-white/[0.06] hidden md:block" />
           
           <div className="flex items-center gap-2 text-sm">
             <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -62,7 +62,7 @@ export default function NewsPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-lg border border-border/30">
+        <div className="flex items-center gap-2 text-xs text-zinc-400 bg-white/[0.03] px-3 py-1.5 rounded-xl border border-white/[0.04]">
           <Clock className="w-4 h-4" />
           <span>{localTime} ({timeZone})</span>
         </div>

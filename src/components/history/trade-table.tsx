@@ -168,9 +168,9 @@ export function TradeTable({ data, onEdit, currencyDisplay = "usd" }: TradeTable
   });
 
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+    <div className="w-full overflow-x-auto no-scrollbar rounded-2xl border border-white/[0.04] bg-[#0c0d14]/75 shadow-xs">
       <table className="w-full text-sm text-left">
-        <thead className="bg-surface-50/50 dark:bg-surface-100/50 text-xs text-[var(--text-tertiary)] uppercase border-b border-[var(--border-primary)]">
+        <thead className="bg-white/[0.02] text-xs text-zinc-400 uppercase tracking-wider border-b border-white/[0.035]">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
@@ -192,8 +192,8 @@ export function TradeTable({ data, onEdit, currencyDisplay = "usd" }: TradeTable
               <tr
                 key={row.id}
                 className={cn(
-                  "border-b border-[var(--border-primary)]/50 transition-colors hover:bg-surface-50 dark:hover:bg-surface-100/30",
-                  index % 2 === 0 ? "bg-transparent" : "bg-surface-50/20 dark:bg-surface-100/10"
+                  "border-b border-white/[0.025] last:border-b-0 transition-colors hover:bg-white/[0.03]",
+                  index % 2 === 0 ? "bg-transparent" : "bg-white/[0.01]"
                 )}
               >
                 {row.getVisibleCells().map((cell) => (
