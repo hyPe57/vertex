@@ -24,7 +24,7 @@ export function EquityCurve() {
   }, []);
 
   return (
-    <div className="h-[280px] w-full mt-2">
+    <div className="h-[430px] w-full mt-2">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
