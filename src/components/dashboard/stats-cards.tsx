@@ -3,7 +3,6 @@
 import { mockAggregateStats, mockDailyStats } from "@/lib/mock-data";
 import { useCurrencyStore } from "@/stores";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
-import { Card } from "@/components/ui";
 import { motion } from "framer-motion";
 import { TrendingUp, TrendingDown } from "lucide-react";
 
@@ -20,8 +19,8 @@ function Sparkline({
   const min = Math.min(...points);
   const max = Math.max(...points);
   const range = max - min || 1;
-  const width = 52;
-  const height = 24;
+  const width = 56;
+  const height = 28;
   const paddingX = 2;
   const paddingTop = 3;
   const paddingBottom = 3;
@@ -43,7 +42,7 @@ function Sparkline({
     <svg width={width} height={height} className="overflow-visible shrink-0">
       <defs>
         <linearGradient id={`grad-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+          <stop offset="0%" stopColor={color} stopOpacity={0.4} />
           <stop offset="100%" stopColor={color} stopOpacity={0.0} />
         </linearGradient>
       </defs>
@@ -61,7 +60,7 @@ function Sparkline({
         cy={lastPoint.y}
         r="2.5"
         fill={color}
-        className="filter drop-shadow-[0_0_3px_rgba(255,255,255,0.4)]"
+        className="filter drop-shadow-[0_0_4px_rgba(255,255,255,0.4)]"
       />
     </svg>
   );
@@ -75,40 +74,40 @@ function SemicircleGauge({
   percent: number;
   color?: string;
 }) {
-  const radius = 17;
-  const circumference = Math.PI * radius; // length ~53.4
+  const radius = 18;
+  const circumference = Math.PI * radius; // length ~56.55
   const clamped = Math.min(Math.max(percent, 0), 100);
   const strokeDashoffset = circumference - (clamped / 100) * circumference;
 
   return (
     <svg
-      width="44"
-      height="25"
-      viewBox="0 0 44 25"
+      width="46"
+      height="26"
+      viewBox="0 0 46 26"
       className="shrink-0 overflow-visible"
     >
       {/* Background Track Arc */}
       <path
-        d="M 5,22 A 17,17 0 0,1 39,22"
+        d="M 5,23 A 18,18 0 0,1 41,23"
         fill="none"
         stroke="currentColor"
         className="text-[var(--border-primary)]"
-        strokeWidth="3.2"
+        strokeWidth="3.5"
         strokeLinecap="round"
-        opacity="0.45"
+        opacity="0.5"
       />
       {/* Foreground Progress Arc */}
       <path
-        d="M 5,22 A 17,17 0 0,1 39,22"
+        d="M 5,23 A 18,18 0 0,1 41,23"
         fill="none"
         stroke={color}
-        strokeWidth="3.2"
+        strokeWidth="3.5"
         strokeDasharray={circumference}
         strokeDashoffset={strokeDashoffset}
         strokeLinecap="round"
         className="transition-all duration-500 ease-out"
         style={{
-          filter: `drop-shadow(0 0 3px ${color}60)`,
+          filter: `drop-shadow(0 0 4px ${color}60)`,
         }}
       />
     </svg>
@@ -190,7 +189,7 @@ export function StatsCards() {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
       {items.map((item, i) => (
         <motion.div
           key={item.id}
@@ -198,25 +197,29 @@ export function StatsCards() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: i * 0.02 }}
         >
-          <div className="p-3 rounded-lg bg-[var(--bg-secondary)]/80 border border-[var(--border-primary)] flex flex-col justify-between min-h-[78px] hover:border-brand-500/30 transition-colors">
+          <div className="p-3.5 rounded-xl bg-[var(--bg-secondary)]/90 border border-[var(--border-primary)] flex flex-col justify-between min-h-[82px] hover:border-brand-500/40 transition-all duration-200 shadow-xs">
             {/* Header: Label + Trend Icon */}
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] truncate">
                 {item.label}
               </span>
               {item.trend === "up" && (
-                <TrendingUp size={12} className="text-profit shrink-0" />
+                <span className="flex items-center text-profit bg-profit/10 p-0.5 rounded">
+                  <TrendingUp size={12} />
+                </span>
               )}
               {item.trend === "down" && (
-                <TrendingDown size={12} className="text-loss shrink-0" />
+                <span className="flex items-center text-loss bg-loss/10 p-0.5 rounded">
+                  <TrendingDown size={12} />
+                </span>
               )}
             </div>
 
             {/* Bottom Row: Value + Visual Indicator */}
-            <div className="mt-1 flex items-end justify-between gap-1.5">
+            <div className="mt-1.5 flex items-end justify-between gap-1.5">
               <span
                 className={cn(
-                  "text-sm sm:text-base font-bold font-mono tracking-tight",
+                  "text-base sm:text-lg font-bold font-mono tracking-tight",
                   item.trend === "up" && "text-profit",
                   item.trend === "down" && "text-loss",
                   item.trend === "neutral" && "text-[var(--text-primary)]"
