@@ -208,12 +208,12 @@ export function Drawer({
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             className={cn(
-              "fixed right-0 top-0 h-full z-50 bg-[var(--bg-primary)] border-l border-[var(--border-primary)] shadow-2xl",
+              "fixed right-0 top-0 h-full z-50 bg-[var(--bg-primary)] border-l border-white/[0.04] shadow-2xl",
               width
             )}
           >
             <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-primary)]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.04]">
                 {title && (
                   <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                     {title}

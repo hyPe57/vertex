@@ -34,7 +34,7 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 w-full border-b border-[var(--border-primary)] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 w-full border-b border-white/[0.035] bg-[var(--bg-primary)]/80 backdrop-blur-xl">
         <div className="flex items-center h-14 px-6 gap-6">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
@@ -87,7 +87,7 @@ export function Header() {
               <span className="hidden lg:inline">AI</span>
             </button>
 
-            <div className="w-px h-5 bg-[var(--border-primary)]" />
+            <div className="w-px h-5 bg-white/[0.06]" />
 
             <ThemeToggle />
 

@@ -200,7 +200,7 @@ export function CalendarGrid({
   };
 
   return (
-    <div className="w-full overflow-x-auto pb-1">
+    <div className="w-full overflow-x-auto no-scrollbar pb-1">
       <div className="min-w-[640px] flex flex-col">
         {/* 1. Column Headers (SU, MO, TU, WE, TH, FR, SA, TOTAL) */}
         <div className="grid grid-cols-8 gap-1.5 sm:gap-2 mb-2">

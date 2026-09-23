@@ -51,8 +51,7 @@ export function DashboardCalendar() {
 
   return (
     <div className="rounded-2xl p-4 sm:p-5 border border-white/[0.035] bg-[#0c0d14]/75 shadow-xs flex flex-col gap-4">
-      {/* Top Header matching Reference: [< September 2026 >]  Monthly P/L: +$124.52  32 trades · 44% WR · 3 active days [Today] */}
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-2 border-b border-white/[0.04]">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-1">
         {/* Left: Month Navigator Pill */}
         <div className="flex items-center gap-1 bg-[#13141f] px-1.5 py-1 rounded-xl border border-white/[0.06] shadow-xs">
           <Button

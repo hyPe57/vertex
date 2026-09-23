@@ -29,7 +29,7 @@ export function DailyPnlChart({ height = 180 }: { height?: number }) {
   return (
     <div className="glass-card rounded-2xl p-5 border border-[var(--border-primary)] shadow-sm flex flex-col justify-between h-full">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-[var(--border-primary)]/50">
+      <div className="flex items-center justify-between pb-1">
         <div>
           <h2 className="text-base font-bold text-[var(--text-primary)]">Daily P&L</h2>
           <p className="text-[11px] text-[var(--text-tertiary)]">
