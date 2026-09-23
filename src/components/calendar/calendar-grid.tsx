@@ -11,6 +11,7 @@ import {
   getDay,
   subMonths,
   addMonths,
+  isSameDay,
 } from "date-fns";
 import type { DailyStats } from "@/types";
 
@@ -101,9 +102,12 @@ export function CalendarGrid({
   const { display } = useCurrencyStore();
   const isPercent = display === "percent";
 
-  // Default active day is Day 5 (Sep 5, 2026) as shown in the reference image
-  const [internalSelectedDate, setInternalSelectedDate] = useState<string>("2026-09-05");
-  const activeDate = externalSelectedDate ?? internalSelectedDate;
+  // Default active day is null so sidebar does not open on page load
+  const [internalSelectedDate, setInternalSelectedDate] = useState<string | null>(null);
+  const activeDate = externalSelectedDate !== undefined ? externalSelectedDate : internalSelectedDate;
+
+  // Today's benchmark date
+  const today = new Date("2026-09-23T12:00:00Z");
 
   // Calendar dates layout
   const days = useMemo(() => {
@@ -188,9 +192,11 @@ export function CalendarGrid({
 
   const dayHeaders = ["SU", "MO", "TU", "WE", "TH", "FR", "SA", "TOTAL"];
 
-  const handleCardClick = (dateString: string) => {
-    setInternalSelectedDate(dateString);
-    onDayClick(dateString);
+  const handleCardClick = (dateString: string, hasTrades: boolean) => {
+    if (hasTrades) {
+      setInternalSelectedDate(dateString);
+      onDayClick(dateString);
+    }
   };
 
   return (
@@ -230,10 +236,11 @@ export function CalendarGrid({
               <div key={wIdx} className="grid grid-cols-8 gap-1.5 sm:gap-2">
                 {/* 7 Days in Week */}
                 {week.map((dayObj) => {
-                  const { dateString, dayNum, isCurrentMonth, stat } = dayObj;
+                  const { date, dateString, dayNum, isCurrentMonth, stat } = dayObj;
                   const hasTrades = Boolean(stat && stat.tradeCount > 0);
                   const isProfit = Boolean(stat && stat.netPnl > 0);
                   const isLoss = Boolean(stat && stat.netPnl < 0);
+                  const isToday = isSameDay(date, today);
                   const isSelected = activeDate === dateString;
 
                   // Out of current month
@@ -256,19 +263,23 @@ export function CalendarGrid({
                     );
                   }
 
-                  // In current month, but no trades
+                  // In current month, but no trades (sidebar does NOT open)
                   if (!hasTrades || !stat) {
                     return (
                       <div
                         key={dateString}
-                        onClick={() => handleCardClick(dateString)}
                         className={cn(
-                          "h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 cursor-pointer select-none",
-                          "bg-[#13141c]/90 border border-white/[0.05] hover:border-white/15 hover:bg-[#181924]",
-                          isSelected && "ring-2 ring-emerald-400 border border-emerald-400"
+                          "h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 select-none",
+                          "bg-[#13141c]/90 border border-white/[0.04] hover:border-white/[0.08] hover:bg-[#161722]",
+                          isToday && "ring-1 ring-inset ring-brand-500/50 border-brand-500/40 bg-brand-500/[0.04]"
                         )}
                       >
-                        <span className="text-[10px] sm:text-[11px] font-medium text-zinc-500 leading-none">
+                        <span
+                          className={cn(
+                            "text-[10px] sm:text-[11px] leading-none font-medium",
+                            isToday ? "text-brand-400 font-bold" : "text-zinc-500"
+                          )}
+                        >
                           {dayNum}
                         </span>
                         <div className="flex items-center justify-center my-auto">
@@ -281,16 +292,17 @@ export function CalendarGrid({
                     );
                   }
 
-                  // Day WITH Trades (Profit or Loss with Sparkline)
+                  // Day WITH Trades (Profit or Loss with Sparkline - clicks open drawer)
                   return (
                     <div
                       key={dateString}
-                      onClick={() => handleCardClick(dateString)}
+                      onClick={() => handleCardClick(dateString, true)}
                       className={cn(
                         "h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 cursor-pointer select-none relative overflow-hidden",
                         isProfit && "bg-[#0b1c16]/80 border border-emerald-500/30 hover:border-emerald-500/60",
                         isLoss && "bg-[#210e14]/80 border border-rose-500/30 hover:border-rose-500/60",
-                        isSelected && "ring-2 ring-emerald-400 border-2 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] z-10"
+                        isSelected && "ring-2 ring-emerald-400 border-2 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] z-10",
+                        isToday && !isSelected && "ring-1 ring-inset ring-brand-500/60 border-brand-500/50"
                       )}
                     >
                       {/* Top Row: Date Number (Left) */}
@@ -300,7 +312,12 @@ export function CalendarGrid({
                             {dayNum}
                           </span>
                         ) : (
-                          <span className="text-[10px] sm:text-[11px] font-semibold text-zinc-300 leading-none">
+                          <span
+                            className={cn(
+                              "text-[10px] sm:text-[11px] leading-none font-semibold",
+                              isToday ? "text-brand-400 font-bold" : "text-zinc-300"
+                            )}
+                          >
                             {dayNum}
                           </span>
                         )}

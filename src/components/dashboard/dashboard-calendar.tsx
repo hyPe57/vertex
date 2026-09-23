@@ -13,13 +13,13 @@ import { formatCurrency } from "@/lib/utils";
 export function DashboardCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date("2026-09-01T12:00:00Z"));
   const { display, toggleDisplay } = useCurrencyStore();
-  const [selectedDate, setSelectedDate] = useState<string | null>("2026-09-05");
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   const prevMonth = () => setCurrentDate((prev) => subMonths(prev, 1));
   const nextMonth = () => setCurrentDate((prev) => addMonths(prev, 1));
   const resetToday = () => {
     setCurrentDate(new Date("2026-09-01T12:00:00Z"));
-    setSelectedDate("2026-09-05");
+    setSelectedDate(null);
   };
 
   // Dynamically compute monthly stats
@@ -50,7 +50,7 @@ export function DashboardCalendar() {
   }, [currentDate]);
 
   return (
-    <div className="rounded-2xl p-4 sm:p-5 border border-white/[0.06] bg-[#0c0d14]/90 shadow-sm flex flex-col gap-4">
+    <div className="rounded-2xl p-4 sm:p-5 border border-white/[0.035] bg-[#0c0d14]/75 shadow-xs flex flex-col gap-4">
       {/* Top Header matching Reference: [< September 2026 >]  Monthly P/L: +$124.52  32 trades · 44% WR · 3 active days [Today] */}
       <div className="flex flex-col lg:flex-row items-center justify-between gap-3 pb-2 border-b border-white/[0.04]">
         {/* Left: Month Navigator Pill */}
