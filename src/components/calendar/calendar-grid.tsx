@@ -21,79 +21,6 @@ interface CalendarGridProps {
   selectedDate?: string | null;
 }
 
-// Sparkline SVG renderer with glow effect and smooth Bezier curve
-function DaySparkline({
-  dayNum,
-  stat,
-  isWeekly,
-  pnl,
-}: {
-  dayNum?: number;
-  stat?: DailyStats;
-  isWeekly?: boolean;
-  pnl?: number;
-}) {
-  const gradientId = useId();
-  const netPnl = stat ? stat.netPnl : pnl ?? 0;
-  const isProfit = netPnl > 0;
-  const isLoss = netPnl < 0;
-
-  let path = "M 0,12 L 100,12";
-  if (isWeekly) {
-    // Week cumulative curve (oscillating with rally at end)
-    path = "M 0,14 C 15,14 25,17 38,12 C 48,15 58,11 68,15 C 78,16 88,13 94,8 L 100,6";
-  } else if (dayNum === 3) {
-    // Day 3: Smooth S-curve climb
-    path = "M 0,18 C 15,18 22,18 32,10 C 42,4 55,5 100,5";
-  } else if (dayNum === 4) {
-    // Day 4: Volatile loss dip
-    path = "M 0,8 C 10,8 14,15 22,12 C 30,9 38,18 48,11 C 58,7 68,14 78,10 C 88,14 94,20 100,20";
-  } else if (dayNum === 5) {
-    // Day 5: Surge to crest
-    path = "M 0,19 C 25,19 45,17 65,11 C 75,7 88,5 95,8 L 100,10";
-  } else if (isProfit) {
-    // Generic profit curve
-    path = "M 0,18 C 20,18 35,16 50,11 C 65,6 80,5 100,4";
-  } else if (isLoss) {
-    // Generic loss curve
-    path = "M 0,6 C 20,6 35,11 50,15 C 65,19 80,21 100,21";
-  }
-
-  const areaPath = `${path} L 100 24 L 0 24 Z`;
-  const strokeColor = isProfit ? "#10b981" : isLoss ? "#f43f5e" : "#52525b";
-
-  return (
-    <div className="w-full h-5 sm:h-6 my-auto flex items-center">
-      <svg
-        viewBox="0 0 100 24"
-        className="w-full h-full overflow-visible"
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop
-              offset="0%"
-              stopColor={strokeColor}
-              stopOpacity={isProfit ? 0.35 : 0.25}
-            />
-            <stop offset="100%" stopColor={strokeColor} stopOpacity={0.0} />
-          </linearGradient>
-        </defs>
-        <path d={areaPath} fill={`url(#${gradientId})`} />
-        <path
-          d={path}
-          fill="none"
-          stroke={strokeColor}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
-        />
-      </svg>
-    </div>
-  );
-}
-
 export function CalendarGrid({
   currentDate,
   onDayClick,
@@ -248,17 +175,17 @@ export function CalendarGrid({
                     return (
                       <div
                         key={dateString}
-                        className="h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#12131a]/60 border border-white/[0.03] select-none opacity-40"
+                        className="h-[96px] sm:h-[106px] md:h-[116px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#12131a]/60 border border-white/[0.03] select-none opacity-40"
                       >
                         <span className="text-[10px] sm:text-[11px] font-medium text-zinc-600 leading-none">
                           {dayNum}
                         </span>
-                        <div className="flex items-center justify-center my-auto">
+                        <div className="flex-1 flex items-center justify-center my-auto">
                           <span className="text-zinc-800 font-mono text-[11px] select-none">
                             --
                           </span>
                         </div>
-                        <div className="h-3" />
+                        <div className="h-2.5" />
                       </div>
                     );
                   }
@@ -269,7 +196,7 @@ export function CalendarGrid({
                       <div
                         key={dateString}
                         className={cn(
-                          "h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 select-none",
+                          "h-[96px] sm:h-[106px] md:h-[116px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 select-none",
                           "bg-[#13141c]/90 border border-white/[0.04] hover:border-white/[0.08] hover:bg-[#161722]",
                           isToday && "ring-1 ring-inset ring-brand-500/50 border-brand-500/40 bg-brand-500/[0.04]"
                         )}
@@ -282,25 +209,25 @@ export function CalendarGrid({
                         >
                           {dayNum}
                         </span>
-                        <div className="flex items-center justify-center my-auto">
-                          <span className="text-zinc-700/60 font-mono text-[11px] select-none">
+                        <div className="flex-1 flex items-center justify-center my-auto">
+                          <span className="text-zinc-700/50 font-mono text-[11px] select-none">
                             --
                           </span>
                         </div>
-                        <div className="h-3" />
+                        <div className="h-2.5" />
                       </div>
                     );
                   }
 
-                  // Day WITH Trades (Profit or Loss with Sparkline - clicks open drawer)
+                  // Day WITH Trades (Money in Middle, No Sparkline)
                   return (
                     <div
                       key={dateString}
                       onClick={() => handleCardClick(dateString, true)}
                       className={cn(
-                        "h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 cursor-pointer select-none relative overflow-hidden",
-                        isProfit && "bg-[#0b1c16]/80 border border-emerald-500/30 hover:border-emerald-500/60",
-                        isLoss && "bg-[#210e14]/80 border border-rose-500/30 hover:border-rose-500/60",
+                        "h-[96px] sm:h-[106px] md:h-[116px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between transition-all duration-150 cursor-pointer select-none relative overflow-hidden",
+                        isProfit && "bg-[#0b1c16]/80 border border-emerald-500/25 hover:border-emerald-500/50",
+                        isLoss && "bg-[#210e14]/80 border border-rose-500/25 hover:border-rose-500/50",
                         isSelected && "ring-2 ring-emerald-400 border-2 border-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] z-10",
                         isToday && !isSelected && "ring-1 ring-inset ring-brand-500/60 border-brand-500/50"
                       )}
@@ -323,21 +250,22 @@ export function CalendarGrid({
                         )}
                       </div>
 
-                      {/* Middle Row: Inline SVG Sparkline */}
-                      <DaySparkline dayNum={dayNum} stat={stat} />
-
-                      {/* Bottom Row: Trades Count (Left) & PnL (Right) */}
-                      <div className="flex items-center justify-between gap-1 leading-none mt-auto">
-                        <span className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">
-                          {stat.tradeCount} trades
-                        </span>
+                      {/* Middle: Money Amount (P&L) Placed Right in the Center */}
+                      <div className="flex-1 flex items-center justify-center my-auto">
                         <span
                           className={cn(
-                            "font-mono text-[10px] sm:text-xs xl:text-[12px] font-bold tracking-tight",
+                            "tabular-nums text-xs sm:text-sm md:text-base font-bold tracking-tight text-center",
                             isProfit ? "text-emerald-400" : "text-rose-400"
                           )}
                         >
                           {formatPnl(stat.netPnl, stat.netPnlPercent)}
+                        </span>
+                      </div>
+
+                      {/* Bottom Row: Trades Count Centered */}
+                      <div className="flex items-center justify-center leading-none mt-auto">
+                        <span className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">
+                          {stat.tradeCount} trades
                         </span>
                       </div>
                     </div>
@@ -346,38 +274,37 @@ export function CalendarGrid({
 
                 {/* 8th Column: TOTAL Card */}
                 {hasWeeklyTrades ? (
-                  <div className="h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#0c1a17]/90 border border-emerald-500/25 select-none relative overflow-hidden">
+                  <div className="h-[96px] sm:h-[106px] md:h-[116px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#0c1a17]/90 border border-emerald-500/25 select-none relative overflow-hidden">
                     <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-zinc-400 leading-none">
                       WEEK {weekNumber}
                     </span>
 
-                    <DaySparkline isWeekly pnl={weeklyPnl} />
+                    {/* Middle: Weekly P&L Right in the Center */}
+                    <div className="flex-1 flex items-center justify-center my-auto">
+                      <span className="tabular-nums text-xs sm:text-sm md:text-base font-bold text-emerald-400 tracking-tight text-center">
+                        {formatPnl(weeklyPnl, weeklyPercent)}
+                      </span>
+                    </div>
 
-                    <div className="flex items-center justify-between gap-1 leading-none mt-auto">
+                    <div className="flex items-center justify-center leading-none mt-auto">
                       <span className="text-[9px] sm:text-[10px] text-zinc-400 font-medium">
                         {weeklyTrades} trades
-                      </span>
-                      <span className="font-mono text-[10px] sm:text-xs xl:text-[12px] font-bold text-emerald-400 tracking-tight">
-                        {formatPnl(weeklyPnl, weeklyPercent)}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <div className="h-[78px] sm:h-[84px] md:h-[90px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#13141c]/90 border border-white/[0.04] select-none">
+                  <div className="h-[96px] sm:h-[106px] md:h-[116px] rounded-xl p-2 sm:p-2.5 flex flex-col justify-between bg-[#13141c]/90 border border-white/[0.04] select-none">
                     <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-zinc-500 leading-none">
                       WEEK {weekNumber}
                     </span>
 
-                    <div className="flex items-center justify-center my-auto">
+                    <div className="flex-1 flex items-center justify-center my-auto">
                       <span className="text-zinc-700/60 font-mono text-[11px] select-none">
                         --
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-1 leading-none mt-auto">
-                      <span className="text-[9px] sm:text-[10px] text-zinc-600 font-medium">
-                        -
-                      </span>
+                    <div className="flex items-center justify-center leading-none mt-auto">
                       <span className="font-mono text-[10px] sm:text-xs text-zinc-600">
                         $0.00
                       </span>
