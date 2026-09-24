@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { Theme, CurrencyDisplay, Trade } from "@/types";
-import { mockTrades } from "@/lib/mock-data";
+import type { Theme, CurrencyDisplay, Trade, Port } from "@/types";
+import { mockTrades, mockPorts } from "@/lib/mock-data";
 
 // ─── Theme Store ───
 
@@ -48,20 +48,84 @@ export const useCurrencyStore = create<CurrencyState>((set) => ({
 // ─── Active Port Store ───
 
 interface PortState {
+  ports: Port[];
   activePortId: string | null;
   setActivePort: (id: string) => void;
+  addPort: (portData: Omit<Port, "id" | "currentBalance" | "syncStatus" | "isActive"> & { currentBalance?: number }) => Port;
+  updatePort: (id: string, updated: Partial<Port>) => void;
+  deletePort: (id: string) => void;
+  syncPort: (id: string) => Promise<void>;
   portSelectorOpen: boolean;
   setPortSelectorOpen: (open: boolean) => void;
   togglePortSelector: () => void;
+  isAddModalOpen: boolean;
+  setIsAddModalOpen: (open: boolean) => void;
 }
 
 export const usePortStore = create<PortState>((set) => ({
+  ports: mockPorts,
   activePortId: "port-1",
   setActivePort: (id) => set({ activePortId: id }),
+  addPort: (portData) => {
+    const newPort: Port = {
+      id: `port-${Date.now()}`,
+      name: portData.name,
+      platform: portData.platform,
+      initialBalance: Number(portData.initialBalance) || 10000,
+      currentBalance: Number(portData.currentBalance ?? portData.initialBalance) || 10000,
+      syncStatus: "connected",
+      isActive: true,
+      accountNumber: portData.accountNumber,
+      brokerServer: portData.brokerServer,
+      lastSyncedAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      ports: [newPort, ...state.ports],
+      activePortId: newPort.id,
+      portSelectorOpen: false,
+      isAddModalOpen: false,
+    }));
+    return newPort;
+  },
+  updatePort: (id, updated) =>
+    set((state) => ({
+      ports: state.ports.map((p) => (p.id === id ? { ...p, ...updated } : p)),
+    })),
+  deletePort: (id) =>
+    set((state) => {
+      const remaining = state.ports.filter((p) => p.id !== id);
+      const nextActiveId =
+        state.activePortId === id ? (remaining[0]?.id || null) : state.activePortId;
+      return {
+        ports: remaining,
+        activePortId: nextActiveId,
+      };
+    }),
+  syncPort: async (id) => {
+    set((state) => ({
+      ports: state.ports.map((p) =>
+        p.id === id ? { ...p, syncStatus: "syncing" } : p
+      ),
+    }));
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    set((state) => ({
+      ports: state.ports.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              syncStatus: "connected",
+              lastSyncedAt: new Date().toISOString(),
+            }
+          : p
+      ),
+    }));
+  },
   portSelectorOpen: false,
   setPortSelectorOpen: (open) => set({ portSelectorOpen: open }),
   togglePortSelector: () =>
     set((state) => ({ portSelectorOpen: !state.portSelectorOpen })),
+  isAddModalOpen: false,
+  setIsAddModalOpen: (open) => set({ isAddModalOpen: open }),
 }));
 
 // ─── Drawer Store ───
@@ -89,6 +153,7 @@ interface TradeState {
   addTrade: (trade: Trade) => void;
   updateTrade: (id: string, updated: Partial<Trade>) => void;
   deleteTrade: (id: string) => void;
+  deleteTradeImage: (tradeId: string, imageId?: string) => void;
 }
 
 export const useTradeStore = create<TradeState>((set) => ({
@@ -104,5 +169,18 @@ export const useTradeStore = create<TradeState>((set) => ({
   deleteTrade: (id) =>
     set((state) => ({
       trades: state.trades.filter((t) => t.id !== id),
+    })),
+  deleteTradeImage: (tradeId, imageId) =>
+    set((state) => ({
+      trades: state.trades.map((t) => {
+        if (t.id !== tradeId) return t;
+        if (!imageId) {
+          return { ...t, images: [] };
+        }
+        return {
+          ...t,
+          images: t.images ? t.images.filter((img) => img.id !== imageId) : [],
+        };
+      }),
     })),
 }));

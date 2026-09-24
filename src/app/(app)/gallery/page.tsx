@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { useTradeStore } from "@/stores";
 import { mockTags } from "@/lib/mock-data";
 import { ImageGrid } from "@/components/gallery/image-grid";
-import { Select, Badge } from "@/components/ui";
+import { Select } from "@/components/ui";
 
 export default function GalleryPage() {
   const [filterAsset, setFilterAsset] = useState<string>("all");
@@ -29,21 +29,26 @@ export default function GalleryPage() {
   const uniqueAssets = Array.from(new Set(tradesWithImages.map((t) => t.asset)));
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="w-full max-w-[1500px] mx-auto px-4 lg:px-8 py-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.04]">
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Setup Gallery</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Visual journal of your trading setups ({filteredTrades.length} images)
+          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            Setup Gallery
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-neutral-400 font-normal">
+              {filteredTrades.length} Setups
+            </span>
+          </h1>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            Visual journal of chart setups and execution screenshots
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <Select
             value={filterAsset}
             onChange={(e) => setFilterAsset(e.target.value)}
             options={[
-              { label: "All Assets", value: "all" },
+              { label: "All Symbols", value: "all" },
               ...uniqueAssets.map((asset) => ({ label: asset, value: asset })),
             ]}
           />
@@ -51,7 +56,7 @@ export default function GalleryPage() {
             value={filterTag}
             onChange={(e) => setFilterTag(e.target.value)}
             options={[
-              { label: "All Tags", value: "all" },
+              { label: "All Setups", value: "all" },
               ...mockTags.map((tag) => ({ label: tag.name, value: tag.name })),
             ]}
           />
@@ -60,8 +65,8 @@ export default function GalleryPage() {
             onChange={(e) => setFilterOutcome(e.target.value)}
             options={[
               { label: "All Outcomes", value: "all" },
-              { label: "Wins", value: "win" },
-              { label: "Losses", value: "loss" },
+              { label: "Wins (+)", value: "win" },
+              { label: "Losses (-)", value: "loss" },
             ]}
           />
         </div>

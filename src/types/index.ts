@@ -34,6 +34,8 @@ export interface Port {
   syncStatus: SyncStatus;
   isActive: boolean;
   lastSyncedAt?: string;
+  accountNumber?: string;
+  brokerServer?: string;
 }
 
 // ─── Trade ───

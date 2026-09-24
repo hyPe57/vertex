@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { EquityCurve, TimeframePeriod } from "./equity-curve";
 import { formatCurrency, formatPercent, cn } from "@/lib/utils";
-import { mockPorts } from "@/lib/mock-data";
 import { usePortStore, useCurrencyStore } from "@/stores";
 
 export function EquityCurveCard({
@@ -11,13 +10,16 @@ export function EquityCurveCard({
 }: {
   period?: TimeframePeriod;
 }) {
-  const { activePortId } = usePortStore();
+  const { activePortId, ports } = usePortStore();
   const { display } = useCurrencyStore();
   const [chartMode, setChartMode] = useState<"cumulative" | "breakeven">("cumulative");
 
-  const activePort = mockPorts.find((p) => p.id === activePortId) || mockPorts[0];
+  const activePort = ports.find((p) => p.id === activePortId) || ports[0] || {
+    currentBalance: 10000,
+    initialBalance: 10000,
+  };
   const pnl = activePort.currentBalance - activePort.initialBalance;
-  const pnlPct = (pnl / activePort.initialBalance) * 100;
+  const pnlPct = activePort.initialBalance > 0 ? (pnl / activePort.initialBalance) * 100 : 0;
 
   return (
     <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between h-full">

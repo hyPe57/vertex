@@ -5,14 +5,15 @@ import { Trade } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Badge, StatBox } from "@/components/ui";
-import { X } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 
 interface ImageExpandProps {
   trade: Trade | null;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
-export function ImageExpand({ trade, onClose }: ImageExpandProps) {
+export function ImageExpand({ trade, onClose, onDelete }: ImageExpandProps) {
   // Prevent scrolling when open
   useEffect(() => {
     if (trade) {
@@ -51,7 +52,7 @@ export function ImageExpand({ trade, onClose }: ImageExpandProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/75 backdrop-blur-md"
           onClick={onClose}
         />
         
@@ -60,10 +61,10 @@ export function ImageExpand({ trade, onClose }: ImageExpandProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-5xl max-h-[85vh] bg-[var(--bg-primary)] rounded-2xl shadow-2xl border border-[var(--border-primary)] overflow-hidden flex flex-col lg:flex-row z-10"
+          className="relative w-full max-w-5xl max-h-[85vh] bg-[#0c0d14] rounded-2xl shadow-2xl border border-white/[0.08] overflow-hidden flex flex-col lg:flex-row z-10"
         >
           {/* Image Section */}
-          <div className="flex-1 relative min-h-[40vh] lg:min-h-0 bg-black/70 overflow-hidden flex items-center justify-center group">
+          <div className="flex-1 relative min-h-[40vh] lg:min-h-0 bg-black/90 overflow-hidden flex items-center justify-center group">
             {trade.images && trade.images.length > 0 && trade.images[0].imageUrl ? (
               <img
                 src={trade.images[0].imageUrl}
@@ -87,29 +88,51 @@ export function ImageExpand({ trade, onClose }: ImageExpandProps) {
               </>
             )}
             
-            <button
-              onClick={onClose}
-              className="absolute top-4 left-4 lg:hidden p-2 bg-black/50 hover:bg-black/70 text-white rounded-full backdrop-blur-md transition-colors"
-            >
-              <X size={20} />
-            </button>
+            <div className="absolute top-4 left-4 flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="p-2 bg-black/60 hover:bg-black/80 text-white rounded-full backdrop-blur-md transition-colors cursor-pointer border border-white/10"
+              >
+                <X size={18} />
+              </button>
+              {onDelete && (
+                <button
+                  title="ลบภาพนี้ (Delete image)"
+                  onClick={onDelete}
+                  className="p-2 bg-black/60 hover:bg-rose-500 text-white/80 hover:text-white rounded-full backdrop-blur-md transition-colors cursor-pointer border border-white/10"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Details Sidebar */}
-          <div className="w-full lg:w-96 flex flex-col h-full max-h-[50vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-[var(--border-primary)] bg-[var(--bg-primary)]">
-            <div className="sticky top-0 bg-[var(--bg-primary)] z-10 flex items-center justify-between p-5 border-b border-[var(--border-primary)]">
+          <div className="w-full lg:w-96 flex flex-col h-full max-h-[50vh] lg:max-h-none overflow-y-auto border-t lg:border-t-0 lg:border-l border-white/[0.06] bg-[#0c0d14]">
+            <div className="sticky top-0 bg-[#0c0d14] z-10 flex items-center justify-between p-5 border-b border-white/[0.06]">
               <div>
-                <h2 className="text-xl font-bold text-[var(--text-primary)]">{trade.asset}</h2>
-                <div className="text-sm text-[var(--text-tertiary)]">
+                <h2 className="text-xl font-bold text-white font-mono">{trade.asset}</h2>
+                <div className="text-xs text-neutral-400">
                   {new Date(trade.openTime).toLocaleDateString()}
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                className="hidden lg:flex p-2 rounded-lg text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-surface-100 transition-colors"
-              >
-                <X size={20} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {onDelete && (
+                  <button
+                    title="ลบภาพนี้ (Delete image)"
+                    onClick={onDelete}
+                    className="p-2 rounded-lg text-neutral-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
             <div className="p-5 space-y-6">
