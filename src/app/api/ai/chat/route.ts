@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Auto-detect provider if user pasted a key under a mismatched tab
+    // Auto-detect provider if key format unambiguously matches a provider
     let activeProvider = provider;
     if (trimmedKey.startsWith("AQ.") || trimmedKey.startsWith("AIza")) {
       activeProvider = "gemini";
@@ -46,12 +46,12 @@ ${JSON.stringify(tradingContext, null, 2)}
 Use this actual journal data to answer specific questions about their performance, win rate, emotions, and trade history accurately.`;
     }
 
-    // ── 1. Google Gemini (Supports standard AIza keys & new AQ. keys) ──────
+    // ── 1. Google Gemini ──────────────────────────────────────
     if (activeProvider === "gemini") {
       const candidateModels = [
+        "gemini-3.6-flash",
         "gemini-2.5-flash",
         "gemini-1.5-flash",
-        "gemini-3.6-flash",
         "gemini-1.5-pro",
         "gemini-2.0-flash-exp",
       ];
@@ -89,7 +89,7 @@ Use this actual journal data to answer specific questions about their performanc
           if (!res.ok || data.error) {
             lastError = data.error?.message || `Gemini Error (${model}): ${res.statusText}`;
             console.warn(`[Gemini candidate '${model}' failed]:`, lastError);
-            continue; // try next candidate model
+            continue;
           }
 
           const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -106,76 +106,168 @@ Use this actual journal data to answer specific questions about their performanc
 
     // ── 2. Anthropic Claude ──────────────────────────────────
     if (activeProvider === "claude") {
+      const candidateModels = [
+        "claude-3-5-sonnet-20241022",
+        "claude-3-5-sonnet-latest",
+        "claude-3-5-haiku-20241022",
+        "claude-3-haiku-20240307",
+      ];
+
       const claudeMessages = messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
       }));
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": trimmedKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-3-5-sonnet-20241022",
-          max_tokens: 2048,
-          system: systemPrompt,
-          messages: claudeMessages,
-        }),
-      });
+      let lastError = "";
 
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error?.message || `Claude Error: ${res.statusText}`);
+      for (const model of candidateModels) {
+        try {
+          const res = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "x-api-key": trimmedKey,
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              max_tokens: 2048,
+              system: systemPrompt,
+              messages: claudeMessages,
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            lastError = data.error?.message || `Claude Error (${model}): ${res.statusText}`;
+            console.warn(`[Claude candidate '${model}' failed]:`, lastError);
+            // If invalid api key, don't keep looping
+            if (res.status === 401) {
+              throw new Error(lastError);
+            }
+            continue;
+          }
+
+          const reply = data.content?.[0]?.text;
+          if (reply) {
+            return NextResponse.json({ reply, resolvedProvider: "claude", model });
+          }
+        } catch (err: unknown) {
+          lastError = (err as Error).message;
+          if (lastError.includes("401") || lastError.includes("invalid x-api-key")) {
+            throw err;
+          }
+        }
       }
 
-      const reply = data.content?.[0]?.text || "No response generated.";
-      return NextResponse.json({ reply, resolvedProvider: "claude" });
+      throw new Error(lastError || "Anthropic Claude API connection failed. Please check your API Key.");
     }
 
-    // ── 3. OpenAI / DeepSeek / OpenRouter ────────────────────
-    let targetEndpoint = "https://api.openai.com/v1/chat/completions";
-    let targetModel = "gpt-4o-mini";
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${trimmedKey}`,
-    };
-
-    if (activeProvider === "deepseek") {
-      targetEndpoint = "https://api.deepseek.com/chat/completions";
-      targetModel = "deepseek-chat";
-    } else if (activeProvider === "openrouter") {
-      targetEndpoint = "https://openrouter.ai/api/v1/chat/completions";
-      targetModel = "anthropic/claude-3.5-sonnet";
-      headers["HTTP-Referer"] = "https://vertex-trading.local";
-      headers["X-Title"] = "Vertex Trading Journal";
-    }
-
+    // ── 3. OpenAI, DeepSeek, OpenRouter ──────────────────────
     const fullMessages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
       ...messages,
     ];
 
-    const res = await fetch(targetEndpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: targetModel,
-        messages: fullMessages,
-        temperature: 0.7,
-      }),
-    });
-
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      const errMsg = typeof data.error === "string" ? data.error : data.error?.message || res.statusText;
-      throw new Error(errMsg);
+    interface ProviderConfig {
+      endpoint: string;
+      models: string[];
+      extraHeaders?: Record<string, string>;
     }
 
-    const reply = data.choices?.[0]?.message?.content || "No response generated.";
-    return NextResponse.json({ reply, resolvedProvider: activeProvider });
+    const configs: Record<string, ProviderConfig> = {
+      openai: {
+        endpoint: "https://api.openai.com/v1/chat/completions",
+        models: ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
+      },
+      deepseek: {
+        endpoint: "https://api.deepseek.com/chat/completions",
+        models: ["deepseek-chat", "deepseek-reasoner"],
+      },
+      openrouter: {
+        endpoint: "https://openrouter.ai/api/v1/chat/completions",
+        models: [
+          "anthropic/claude-3.5-sonnet",
+          "deepseek/deepseek-r1",
+          "meta-llama/llama-3.3-70b-instruct",
+          "google/gemini-2.0-flash-001",
+        ],
+        extraHeaders: {
+          "HTTP-Referer": "https://vertex-trading.local",
+          "X-Title": "Vertex Trading Journal",
+        },
+      },
+    };
+
+    let pConfig = configs[activeProvider] || configs.openai;
+    let lastError = "";
+
+    // Try target provider models
+    for (const model of pConfig.models) {
+      try {
+        const res = await fetch(pConfig.endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${trimmedKey}`,
+            ...(pConfig.extraHeaders || {}),
+          },
+          body: JSON.stringify({
+            model,
+            messages: fullMessages,
+            temperature: 0.7,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          const errMsg = typeof data.error === "string" ? data.error : data.error?.message || res.statusText;
+          lastError = errMsg;
+
+          // If on OpenAI and gets invalid key, check if user pasted a DeepSeek key
+          if (activeProvider === "openai" && (res.status === 401 || errMsg.includes("Incorrect API key"))) {
+            // Attempt DeepSeek silently before giving up
+            const dsRes = await fetch(configs.deepseek.endpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${trimmedKey}`,
+              },
+              body: JSON.stringify({
+                model: "deepseek-chat",
+                messages: fullMessages,
+                temperature: 0.7,
+              }),
+            });
+            const dsData = await dsRes.json();
+            if (dsRes.ok && !dsData.error && dsData.choices?.[0]?.message?.content) {
+              return NextResponse.json({
+                reply: dsData.choices[0].message.content,
+                resolvedProvider: "deepseek",
+                model: "deepseek-chat",
+              });
+            }
+          }
+
+          if (res.status === 401) {
+            throw new Error(errMsg);
+          }
+          continue;
+        }
+
+        const reply = data.choices?.[0]?.message?.content;
+        if (reply) {
+          return NextResponse.json({ reply, resolvedProvider: activeProvider, model });
+        }
+      } catch (err: unknown) {
+        lastError = (err as Error).message;
+        if (lastError.includes("401") || lastError.includes("Incorrect API key")) {
+          throw err;
+        }
+      }
+    }
+
+    throw new Error(lastError || `Failed to connect to ${activeProvider.toUpperCase()}. Please check your API Key.`);
   } catch (err: unknown) {
     const error = err as Error;
     console.error("[AI Chat API Error]:", error);
