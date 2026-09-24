@@ -1,303 +1,483 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
-import { useBacktestStore } from "@/stores/backtest-store";
-import { formatCurrency, cn } from "@/lib/utils";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import {
+  createChart,
+  ColorType,
+  LineStyle,
+  CrosshairMode,
+  IChartApi,
+  ISeriesApi,
+  IPriceLine,
+  UTCTimestamp,
+} from "lightweight-charts";
+import { useBacktestStore, BacktestCandle } from "@/stores/backtest-store";
+import {
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Navigation,
+  Activity,
+  Layers,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function CandlestickChart() {
-  const { candles, visibleIndex, activePosition, asset } = useBacktestStore();
+  const {
+    candles,
+    visibleIndex,
+    activePosition,
+    asset,
+    timeframe,
+    setTimeframe,
+  } = useBacktestStore();
+
   const containerRef = useRef<HTMLDivElement>(null);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
 
-  // Show up to 45 candles at a time for optimal readable spacing
-  const maxDisplay = 45;
-  const start = Math.max(0, visibleIndex - maxDisplay);
-  const visibleCandles = useMemo(
-    () => candles.slice(start, visibleIndex + 1),
-    [candles, start, visibleIndex]
-  );
+  // Price lines for active position
+  const entryLineRef = useRef<IPriceLine | null>(null);
+  const tpLineRef = useRef<IPriceLine | null>(null);
+  const slLineRef = useRef<IPriceLine | null>(null);
 
-  const currentCandle = visibleCandles[visibleCandles.length - 1];
+  const [hoverCandle, setHoverCandle] = useState<BacktestCandle | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Calculate High/Low range of visible candles
-  const { minPrice, maxPrice, priceRange } = useMemo(() => {
-    if (visibleCandles.length === 0) {
-      return { minPrice: 0, maxPrice: 100, priceRange: 100 };
-    }
-    let min = Infinity;
-    let max = -Infinity;
-    visibleCandles.forEach((c) => {
-      if (c.low < min) min = c.low;
-      if (c.high > max) max = c.high;
+  // Keep track of the last rendered visibleIndex to optimize incremental updates
+  const lastIndexRef = useRef<number>(-1);
+  const lastAssetRef = useRef<string>(asset);
+
+  // Current active / latest candle
+  const latestCandle = candles[visibleIndex] || candles[candles.length - 1];
+  const displayCandle = hoverCandle || latestCandle;
+  const decimals = asset === "EURUSD" ? 4 : 2;
+
+  // 1. Initialize Lightweight Chart instance
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // Clean up any existing canvas children
+    containerRef.current.innerHTML = "";
+
+    const chart = createChart(containerRef.current, {
+      width: containerRef.current.clientWidth,
+      height: containerRef.current.clientHeight,
+      layout: {
+        background: { type: ColorType.Solid, color: "#090a0f" },
+        textColor: "#71717a",
+        fontSize: 11,
+        fontFamily: "var(--font-geist-mono), monospace",
+      },
+      grid: {
+        vertLines: { color: "rgba(255, 255, 255, 0.03)" },
+        horzLines: { color: "rgba(255, 255, 255, 0.03)" },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+        vertLine: {
+          color: "rgba(255, 255, 255, 0.18)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#18181b",
+        },
+        horzLine: {
+          color: "rgba(255, 255, 255, 0.18)",
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: "#18181b",
+        },
+      },
+      rightPriceScale: {
+        borderColor: "rgba(255, 255, 255, 0.08)",
+        textColor: "#a1a1aa",
+        scaleMargins: {
+          top: 0.12,
+          bottom: 0.12,
+        },
+        autoScale: true,
+      },
+      timeScale: {
+        borderColor: "rgba(255, 255, 255, 0.08)",
+        timeVisible: true,
+        secondsVisible: false,
+        rightOffset: 12,
+        barSpacing: 11,
+        minBarSpacing: 1.5,
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+        horzTouchDrag: true,
+        vertTouchDrag: true,
+      },
+      handleScale: {
+        axisPressedMouseMove: { time: true, price: true },
+        mouseWheel: true,
+        pinch: true,
+      },
     });
 
-    // Also include active position entry/sl/tp in bounds if present
-    if (activePosition) {
-      if (activePosition.entryPrice < min) min = activePosition.entryPrice;
-      if (activePosition.entryPrice > max) max = activePosition.entryPrice;
-      if (activePosition.slPrice) {
-        if (activePosition.slPrice < min) min = activePosition.slPrice;
-        if (activePosition.slPrice > max) max = activePosition.slPrice;
-      }
-      if (activePosition.tpPrice) {
-        if (activePosition.tpPrice < min) min = activePosition.tpPrice;
-        if (activePosition.tpPrice > max) max = activePosition.tpPrice;
-      }
-    }
+    const series = chart.addCandlestickSeries({
+      upColor: "#10b981",
+      downColor: "#f43f5e",
+      borderVisible: false,
+      wickUpColor: "#10b981",
+      wickDownColor: "#f43f5e",
+      priceFormat: {
+        type: "price",
+        precision: decimals,
+        minMove: asset === "EURUSD" ? 0.0001 : 0.01,
+      },
+    });
 
-    const pad = (max - min) * 0.1 || 1;
-    return {
-      minPrice: min - pad,
-      maxPrice: max + pad,
-      priceRange: max - min + pad * 2,
+    // Populate initial candles slice
+    const initialSlice = candles.slice(0, visibleIndex + 1).map((c) => ({
+      time: c.time as UTCTimestamp,
+      open: c.open,
+      high: c.high,
+      low: c.low,
+      close: c.close,
+    }));
+    series.setData(initialSlice);
+    chart.timeScale().fitContent();
+
+    lastIndexRef.current = visibleIndex;
+    lastAssetRef.current = asset;
+    chartRef.current = chart;
+    seriesRef.current = series;
+
+    // Crosshair hover listener for live OHLC bar inspect
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.seriesData || !seriesRef.current) {
+        setHoverCandle(null);
+        return;
+      }
+      const data = param.seriesData.get(seriesRef.current) as
+        | { open: number; high: number; low: number; close: number; time: number }
+        | undefined;
+      if (data) {
+        setHoverCandle({
+          time: data.time,
+          open: data.open,
+          high: data.high,
+          low: data.low,
+          close: data.close,
+          volume: 0,
+        });
+      }
+    });
+
+    // ResizeObserver for responsive chart
+    const resizeObserver = new ResizeObserver(() => {
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
+        });
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+      chartRef.current = null;
+      seriesRef.current = null;
+      entryLineRef.current = null;
+      tpLineRef.current = null;
+      slLineRef.current = null;
     };
-  }, [visibleCandles, activePosition]);
+  }, []); // Run once on mount
 
-  const height = 360;
-  const chartHeight = height - 30; // space for time labels
-  const priceToY = (price: number) => {
-    return chartHeight - ((price - minPrice) / priceRange) * chartHeight;
-  };
+  // 2. Synchronize dataset when candles / visibleIndex / asset updates
+  useEffect(() => {
+    const series = seriesRef.current;
+    const chart = chartRef.current;
+    if (!series || !chart) return;
 
-  const candleWidth = 10;
-  const gap = 6;
-  const totalStep = candleWidth + gap;
+    // Asset changed: reformat precision and reload all candles
+    if (lastAssetRef.current !== asset) {
+      series.applyOptions({
+        priceFormat: {
+          type: "price",
+          precision: decimals,
+          minMove: asset === "EURUSD" ? 0.0001 : 0.01,
+        },
+      });
 
-  // Grid price ticks (5 intervals)
-  const priceTicks = useMemo(() => {
-    const ticks = [];
-    const count = 5;
-    for (let i = 0; i <= count; i++) {
-      const p = minPrice + (priceRange / count) * i;
-      ticks.push(p);
+      const slice = candles.slice(0, visibleIndex + 1).map((c) => ({
+        time: c.time as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+      series.setData(slice);
+      chart.timeScale().fitContent();
+      lastIndexRef.current = visibleIndex;
+      lastAssetRef.current = asset;
+      return;
     }
-    return ticks;
-  }, [minPrice, priceRange]);
 
-  const activeCandleForTooltip =
-    hoverIndex !== null && visibleCandles[hoverIndex]
-      ? visibleCandles[hoverIndex]
-      : currentCandle;
+    // Step forward by 1 candle: smooth incremental update
+    if (visibleIndex === lastIndexRef.current + 1 && candles[visibleIndex]) {
+      const c = candles[visibleIndex];
+      series.update({
+        time: c.time as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      });
+      lastIndexRef.current = visibleIndex;
+    } else if (visibleIndex !== lastIndexRef.current) {
+      // Non-contiguous jump or simulation reset
+      const slice = candles.slice(0, visibleIndex + 1).map((c) => ({
+        time: c.time as UTCTimestamp,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+      series.setData(slice);
+      if (visibleIndex <= 100) {
+        chart.timeScale().fitContent();
+      }
+      lastIndexRef.current = visibleIndex;
+    }
+  }, [candles, visibleIndex, asset, decimals]);
+
+  // 3. Manage Entry, TP, and SL Price Lines
+  useEffect(() => {
+    const series = seriesRef.current;
+    if (!series) return;
+
+    // Remove previous lines
+    if (entryLineRef.current) {
+      try {
+        series.removePriceLine(entryLineRef.current);
+      } catch (_) {}
+      entryLineRef.current = null;
+    }
+    if (tpLineRef.current) {
+      try {
+        series.removePriceLine(tpLineRef.current);
+      } catch (_) {}
+      tpLineRef.current = null;
+    }
+    if (slLineRef.current) {
+      try {
+        series.removePriceLine(slLineRef.current);
+      } catch (_) {}
+      slLineRef.current = null;
+    }
+
+    // Recreate if in active position
+    if (activePosition) {
+      // Entry Line
+      entryLineRef.current = series.createPriceLine({
+        price: activePosition.entryPrice,
+        color: activePosition.direction === "buy" ? "#38bdf8" : "#fb923c",
+        lineWidth: 2,
+        lineStyle: LineStyle.Dashed,
+        axisLabelVisible: true,
+        title: `${activePosition.direction.toUpperCase()} ${activePosition.lotSize}L @ ${activePosition.entryPrice.toFixed(decimals)}`,
+      });
+
+      // TP Line
+      if (activePosition.tpPrice) {
+        tpLineRef.current = series.createPriceLine({
+          price: activePosition.tpPrice,
+          color: "#10b981",
+          lineWidth: 2,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `TP: ${activePosition.tpPrice.toFixed(decimals)}`,
+        });
+      }
+
+      // SL Line
+      if (activePosition.slPrice) {
+        slLineRef.current = series.createPriceLine({
+          price: activePosition.slPrice,
+          color: "#f43f5e",
+          lineWidth: 2,
+          lineStyle: LineStyle.Dotted,
+          axisLabelVisible: true,
+          title: `SL: ${activePosition.slPrice.toFixed(decimals)}`,
+        });
+      }
+    }
+  }, [activePosition, decimals]);
+
+  // Chart Actions
+  const handleZoomIn = useCallback(() => {
+    if (!chartRef.current) return;
+    const current = chartRef.current.timeScale().options().barSpacing || 10;
+    chartRef.current.timeScale().applyOptions({ barSpacing: Math.min(60, current * 1.3) });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    if (!chartRef.current) return;
+    const current = chartRef.current.timeScale().options().barSpacing || 10;
+    chartRef.current.timeScale().applyOptions({ barSpacing: Math.max(2, current * 0.7) });
+  }, []);
+
+  const handleFitContent = useCallback(() => {
+    chartRef.current?.timeScale().fitContent();
+  }, []);
+
+  const handleScrollToRealtime = useCallback(() => {
+    chartRef.current?.timeScale().scrollToRealTime();
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+    setTimeout(() => {
+      if (containerRef.current && chartRef.current) {
+        chartRef.current.applyOptions({
+          width: containerRef.current.clientWidth,
+          height: containerRef.current.clientHeight,
+        });
+        chartRef.current.timeScale().fitContent();
+      }
+    }, 150);
+  }, []);
+
+  // Compute bar delta
+  const priceChange = displayCandle ? displayCandle.close - displayCandle.open : 0;
+  const priceChangePct =
+    displayCandle && displayCandle.open > 0
+      ? (priceChange / displayCandle.open) * 100
+      : 0;
+  const isUp = priceChange >= 0;
 
   return (
     <div
-      ref={containerRef}
-      className="relative w-full h-full min-h-[360px] bg-[#090a0f] rounded-2xl border border-white/[0.06] overflow-hidden flex flex-col justify-between select-none"
+      className={cn(
+        "relative w-full bg-[#090a0f] border border-white/[0.06] overflow-hidden flex flex-col justify-between select-none transition-all shadow-xl",
+        isFullscreen
+          ? "fixed inset-0 z-50 rounded-none h-screen w-screen"
+          : "rounded-2xl h-full min-h-[460px]"
+      )}
     >
-      {/* Top Bar: OHLC Stats */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04] bg-[#0c0d14]/60 backdrop-blur-md z-10 text-[11px] font-mono">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-white tracking-wider">{asset}</span>
-          {activeCandleForTooltip && (
-            <div className="flex items-center gap-2.5 text-neutral-400">
+      {/* ─── Top Bar: Symbol, Live OHLC, and TradingView Controls ─── */}
+      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-white/[0.05] bg-[#0c0d14]/80 backdrop-blur-md z-10 flex-wrap gap-2 text-[11px] font-mono">
+        {/* Left: Asset info & OHLC */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-white tracking-wider text-xs">{asset}</span>
+            <span className="text-[10px] text-neutral-400 font-semibold px-1.5 py-0.5 rounded bg-white/[0.04]">
+              {timeframe}
+            </span>
+          </div>
+
+          {/* Real-time OHLC */}
+          {displayCandle && (
+            <div className="flex items-center gap-2.5 text-neutral-400 text-[11px]">
               <span>
-                O:{" "}
-                <span className="text-white">
-                  {activeCandleForTooltip.open.toFixed(asset === "EURUSD" ? 4 : 2)}
-                </span>
+                O: <span className="text-white font-medium">{displayCandle.open.toFixed(decimals)}</span>
               </span>
               <span>
-                H:{" "}
-                <span className="text-emerald-400">
-                  {activeCandleForTooltip.high.toFixed(asset === "EURUSD" ? 4 : 2)}
-                </span>
+                H: <span className="text-emerald-400 font-medium">{displayCandle.high.toFixed(decimals)}</span>
               </span>
               <span>
-                L:{" "}
-                <span className="text-rose-400">
-                  {activeCandleForTooltip.low.toFixed(asset === "EURUSD" ? 4 : 2)}
-                </span>
+                L: <span className="text-rose-400 font-medium">{displayCandle.low.toFixed(decimals)}</span>
               </span>
               <span>
                 C:{" "}
-                <span
-                  className={
-                    activeCandleForTooltip.close >= activeCandleForTooltip.open
-                      ? "text-emerald-400 font-semibold"
-                      : "text-rose-400 font-semibold"
-                  }
-                >
-                  {activeCandleForTooltip.close.toFixed(asset === "EURUSD" ? 4 : 2)}
+                <span className={cn("font-bold", isUp ? "text-emerald-400" : "text-rose-400")}>
+                  {displayCandle.close.toFixed(decimals)}
                 </span>
+              </span>
+              <span className={cn("text-[10px] font-semibold", isUp ? "text-emerald-400" : "text-rose-400")}>
+                {isUp ? "+" : ""}
+                {priceChange.toFixed(decimals)} ({isUp ? "+" : ""}
+                {priceChangePct.toFixed(2)}%)
               </span>
             </div>
           )}
         </div>
 
-        {/* Live Current Price Ticker */}
-        {currentCandle && (
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold text-emerald-400 font-mono text-xs">
-              {currentCandle.close.toFixed(asset === "EURUSD" ? 4 : 2)}
-            </span>
-          </div>
-        )}
+        {/* Right: TradingView Toolbar Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Zoom In */}
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-neutral-400 hover:text-white transition-colors cursor-pointer border border-white/[0.04]"
+            title="Zoom In"
+          >
+            <ZoomIn size={13} />
+          </button>
+
+          {/* Zoom Out */}
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-neutral-400 hover:text-white transition-colors cursor-pointer border border-white/[0.04]"
+            title="Zoom Out"
+          >
+            <ZoomOut size={13} />
+          </button>
+
+          {/* Fit View / Reset */}
+          <button
+            type="button"
+            onClick={handleFitContent}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-neutral-300 hover:text-white text-[10px] font-medium transition-colors cursor-pointer border border-white/[0.04]"
+            title="Fit All Data to View"
+          >
+            <RotateCcw size={11} />
+            <span>Fit</span>
+          </button>
+
+          {/* Latest Bar */}
+          <button
+            type="button"
+            onClick={handleScrollToRealtime}
+            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-neutral-300 hover:text-white text-[10px] font-medium transition-colors cursor-pointer border border-white/[0.04]"
+            title="Jump to Latest Candle"
+          >
+            <Navigation size={11} />
+            <span>Live</span>
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="p-1.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] text-neutral-400 hover:text-white transition-colors cursor-pointer border border-white/[0.04]"
+            title={isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          >
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+          </button>
+        </div>
       </div>
 
-      {/* SVG Canvas */}
-      <div className="relative flex-1 w-full overflow-hidden">
-        <svg
-          className="w-full h-full"
-          viewBox={`0 0 800 ${chartHeight}`}
-          preserveAspectRatio="none"
-        >
-          {/* Horizontal Grid lines & Price Ticks */}
-          {priceTicks.map((p, i) => {
-            const y = priceToY(p);
-            return (
-              <g key={i}>
-                <line
-                  x1={0}
-                  y1={y}
-                  x2={800}
-                  y2={y}
-                  stroke="rgba(255,255,255,0.03)"
-                  strokeDasharray="3 3"
-                />
-              </g>
-            );
-          })}
-
-          {/* Render Candlesticks */}
-          {visibleCandles.map((c, i) => {
-            // align to right side of svg
-            const x = 740 - (visibleCandles.length - 1 - i) * totalStep;
-            if (x < -20) return null;
-
-            const isGreen = c.close >= c.open;
-            const openY = priceToY(c.open);
-            const closeY = priceToY(c.close);
-            const highY = priceToY(c.high);
-            const lowY = priceToY(c.low);
-
-            const bodyTop = Math.min(openY, closeY);
-            const bodyHeight = Math.max(Math.abs(closeY - openY), 1.5);
-            const color = isGreen ? "#10b981" : "#f43f5e";
-
-            return (
-              <g
-                key={i}
-                onMouseEnter={() => setHoverIndex(i)}
-                onMouseLeave={() => setHoverIndex(null)}
-                className="cursor-crosshair"
-              >
-                {/* Wick */}
-                <line
-                  x1={x + candleWidth / 2}
-                  y1={highY}
-                  x2={x + candleWidth / 2}
-                  y2={lowY}
-                  stroke={color}
-                  strokeWidth={1.2}
-                />
-                {/* Body */}
-                <rect
-                  x={x}
-                  y={bodyTop}
-                  width={candleWidth}
-                  height={bodyHeight}
-                  fill={color}
-                  rx={1}
-                />
-              </g>
-            );
-          })}
-
-          {/* Current Price Line */}
-          {currentCandle && (
-            <line
-              x1={0}
-              y1={priceToY(currentCandle.close)}
-              x2={800}
-              y2={priceToY(currentCandle.close)}
-              stroke="#10b981"
-              strokeWidth={1}
-              strokeDasharray="2 2"
-              opacity={0.6}
-            />
-          )}
-
-          {/* Active Trade Entry Line Overlay */}
-          {activePosition && (
-            <g>
-              <line
-                x1={0}
-                y1={priceToY(activePosition.entryPrice)}
-                x2={800}
-                y2={priceToY(activePosition.entryPrice)}
-                stroke={activePosition.direction === "buy" ? "#10b981" : "#f43f5e"}
-                strokeWidth={1.5}
-                strokeDasharray="4 4"
-              />
-              {activePosition.slPrice && (
-                <line
-                  x1={0}
-                  y1={priceToY(activePosition.slPrice)}
-                  x2={800}
-                  y2={priceToY(activePosition.slPrice)}
-                  stroke="#ef4444"
-                  strokeWidth={1}
-                  strokeDasharray="2 2"
-                  opacity={0.8}
-                />
-              )}
-              {activePosition.tpPrice && (
-                <line
-                  x1={0}
-                  y1={priceToY(activePosition.tpPrice)}
-                  x2={800}
-                  y2={priceToY(activePosition.tpPrice)}
-                  stroke="#22c55e"
-                  strokeWidth={1}
-                  strokeDasharray="2 2"
-                  opacity={0.8}
-                />
-              )}
-            </g>
-          )}
-        </svg>
-
-        {/* Right Price Scale Overlay */}
-        <div className="absolute right-0 top-0 bottom-0 w-16 bg-[#090a0f]/90 border-l border-white/[0.04] flex flex-col justify-between py-2 text-[9px] font-mono text-neutral-400 select-none pointer-events-none items-end pr-1.5">
-          {priceTicks.slice().reverse().map((p, i) => (
-            <span key={i}>{p.toFixed(asset === "EURUSD" ? 4 : 1)}</span>
-          ))}
+      {/* ─── Lightweight Charts Interactive Canvas Container ─── */}
+      <div className="relative flex-1 w-full h-full min-h-[380px] overflow-hidden">
+        {/* Subtle Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-[0.03] select-none">
+          <span className="text-8xl font-black tracking-widest text-white uppercase">
+            {asset}
+          </span>
         </div>
 
-        {/* Active Trade Floating Badge */}
-        {activePosition && (
-          <div
-            className="absolute right-20 px-2 py-1 rounded-lg backdrop-blur-md border text-[10px] font-mono font-bold flex items-center gap-1.5 shadow-lg z-20 pointer-events-none"
-            style={{
-              top: `${Math.max(10, Math.min(priceToY(activePosition.entryPrice) - 12, chartHeight - 30))}px`,
-              borderColor: activePosition.direction === "buy" ? "rgba(16,185,129,0.3)" : "rgba(244,63,94,0.3)",
-              backgroundColor: "rgba(12,13,20,0.85)",
-            }}
-          >
-            <span
-              className={activePosition.direction === "buy" ? "text-emerald-400" : "text-rose-400"}
-            >
-              {activePosition.direction.toUpperCase()} {activePosition.lotSize}L
-            </span>
-            <span className="text-white">@{activePosition.entryPrice.toFixed(asset === "EURUSD" ? 4 : 2)}</span>
-            <span
-              className={cn(
-                "px-1 rounded",
-                activePosition.pnl >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-rose-500/20 text-rose-400"
-              )}
-            >
-              {activePosition.pnl >= 0 ? "+" : ""}${activePosition.pnl.toFixed(2)}
-            </span>
-          </div>
-        )}
-      </div>
+        {/* DOM node where Lightweight Charts mounts */}
+        <div ref={containerRef} className="w-full h-full relative z-10" />
 
-      {/* Bottom Time Axis */}
-      <div className="h-6 w-full border-t border-white/[0.04] bg-[#0c0d14]/60 px-4 flex items-center justify-between text-[9px] font-mono text-neutral-400">
-        <span>{visibleCandles[0]?.time}</span>
-        <span>{visibleCandles[Math.floor(visibleCandles.length / 2)]?.time}</span>
-        <span className="text-neutral-300 font-semibold">{currentCandle?.time}</span>
+        {/* Bottom-left gesture & shortcuts tooltip */}
+        <div className="absolute bottom-2 left-3 z-20 pointer-events-none flex items-center gap-2 text-[10px] font-mono text-neutral-400/80 bg-[#0c0d14]/70 backdrop-blur-sm px-2.5 py-1 rounded-md border border-white/[0.04]">
+          <span>Wheel: Zoom</span>
+          <span>•</span>
+          <span>Drag: Pan</span>
+          <span>•</span>
+          <span>Axes: Scale</span>
+        </div>
       </div>
     </div>
   );

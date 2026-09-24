@@ -72,12 +72,12 @@ export default function BacktestPage() {
       {/* ─── Main Work Area (Chart & Execution Panel) ─── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left: Candlestick Chart (8 cols on lg) */}
-        <div className="lg:col-span-8 h-[400px]">
+        <div className="lg:col-span-8 h-[560px]">
           <CandlestickChart />
         </div>
 
         {/* Right: Execution & Controls (4 cols on lg) */}
-        <div className="lg:col-span-4 h-[400px]">
+        <div className="lg:col-span-4 h-[560px]">
           <ControlPanel />
         </div>
       </div>

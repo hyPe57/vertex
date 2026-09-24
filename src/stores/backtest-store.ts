@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
-export interface Candle {
-  time: string;
+export interface BacktestCandle {
+  time: number; // Unix timestamp in seconds (UTCTimestamp)
   open: number;
   high: number;
   low: number;
@@ -18,7 +18,7 @@ export interface BacktestPosition {
   currentPrice: number;
   slPrice?: number;
   tpPrice?: number;
-  entryTime: string;
+  entryTime: number;
   pnl: number;
   pnlPercent: number;
 }
@@ -30,11 +30,12 @@ export interface BacktestTrade {
   lotSize: number;
   entryPrice: number;
   exitPrice: number;
-  entryTime: string;
-  exitTime: string;
+  entryTime: number;
+  exitTime: number;
   pnl: number;
   pnlPercent: number;
   riskReward: number;
+  exitReason: "TP" | "SL" | "Manual";
 }
 
 export interface BacktestSessionRecord {
@@ -50,41 +51,47 @@ export interface BacktestSessionRecord {
   date: string;
 }
 
-// Generate realistic candle data for different assets
-function generateInitialCandles(asset: string, count = 120): Candle[] {
+// Generate realistic candlestick data with strictly ascending timestamps
+function generateDataset(asset: string, count = 300): BacktestCandle[] {
   let basePrice = 2350.0; // XAUUSD
-  let volatility = 1.8;
+  let volatility = 2.2;
+  const intervalSeconds = 900; // 15m
 
   if (asset === "EURUSD") {
     basePrice = 1.085;
-    volatility = 0.0008;
+    volatility = 0.0009;
   } else if (asset === "BTCUSD") {
     basePrice = 64200.0;
-    volatility = 180.0;
+    volatility = 220.0;
   } else if (asset === "NAS100") {
     basePrice = 18250.0;
-    volatility = 22.0;
+    volatility = 28.0;
   }
 
-  const candles: Candle[] = [];
+  const candles: BacktestCandle[] = [];
   let currentClose = basePrice;
-  const now = new Date();
+  // Start from past time so current candles are up to date
+  const startTime = Math.floor(Date.now() / 1000) - count * intervalSeconds;
 
-  for (let i = count; i >= 0; i--) {
-    const time = new Date(now.getTime() - i * 15 * 60 * 1000);
-    const change = (Math.random() - 0.49) * volatility;
+  for (let i = 0; i < count; i++) {
+    const time = startTime + i * intervalSeconds;
+    // Market cycle simulation: trend + pullbacks
+    const trend = Math.sin(i / 15) * (volatility * 0.4);
+    const noise = (Math.random() - 0.49) * volatility;
+    const change = trend + noise;
     const open = currentClose;
-    const close = Math.max(open + change, basePrice * 0.5);
+    const close = Math.max(open + change, basePrice * 0.4);
     const high = Math.max(open, close) + Math.random() * volatility * 0.6;
     const low = Math.min(open, close) - Math.random() * volatility * 0.6;
-    const volume = Math.floor(Math.random() * 500) + 100;
+    const volume = Math.floor(Math.random() * 800) + 150;
 
+    const decimals = asset === "EURUSD" ? 4 : 2;
     candles.push({
-      time: time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      open: Number(open.toFixed(asset === "EURUSD" ? 4 : 2)),
-      high: Number(high.toFixed(asset === "EURUSD" ? 4 : 2)),
-      low: Number(low.toFixed(asset === "EURUSD" ? 4 : 2)),
-      close: Number(close.toFixed(asset === "EURUSD" ? 4 : 2)),
+      time,
+      open: Number(open.toFixed(decimals)),
+      high: Number(high.toFixed(decimals)),
+      low: Number(low.toFixed(decimals)),
+      close: Number(close.toFixed(decimals)),
       volume,
     });
     currentClose = close;
@@ -93,20 +100,44 @@ function generateInitialCandles(asset: string, count = 120): Candle[] {
   return candles;
 }
 
+// Multipliers for P&L calculations
+function getAssetMultiplier(asset: string): number {
+  if (asset === "EURUSD") return 100000;
+  if (asset === "XAUUSD") return 100;
+  if (asset === "BTCUSD") return 1;
+  return 20; // NAS100
+}
+
+function getPipUnit(asset: string): number {
+  if (asset === "EURUSD") return 0.0001;
+  if (asset === "XAUUSD") return 0.1;
+  if (asset === "BTCUSD") return 1.0;
+  return 1.0; // NAS100
+}
+
 interface BacktestState {
   asset: string;
   timeframe: string;
   startingBalance: number;
   balance: number;
   equity: number;
-  candles: Candle[];
-  visibleIndex: number; // how many candles are currently revealed
+  candles: BacktestCandle[];
+  visibleIndex: number;
   isPlaying: boolean;
-  playSpeed: number; // 1x, 2x, 5x
+  playSpeed: number; // 1x, 2x, 5x, 10x
   lotSize: number;
-  spread: number;
-  slPips: string;
-  tpPips: string;
+  spreadPips: number;
+
+  // TP / SL Controls (Free Setting)
+  tpMode: "pips" | "price" | "rr";
+  slEnabled: boolean;
+  tpEnabled: boolean;
+  slPips: number;
+  tpPips: number;
+  customSlPrice: string;
+  customTpPrice: string;
+  selectedRR: number;
+
   activePosition: BacktestPosition | null;
   closedTrades: BacktestTrade[];
   savedSessions: BacktestSessionRecord[];
@@ -115,22 +146,37 @@ interface BacktestState {
   setAsset: (asset: string) => void;
   setTimeframe: (tf: string) => void;
   setLotSize: (lot: number) => void;
-  setSpread: (spread: number) => void;
-  setSlPips: (pips: string) => void;
-  setTpPips: (pips: string) => void;
+  setSpreadPips: (spread: number) => void;
+  setTpMode: (mode: "pips" | "price" | "rr") => void;
+  setSlEnabled: (enabled: boolean) => void;
+  setTpEnabled: (enabled: boolean) => void;
+  setSlPips: (pips: number) => void;
+  setTpPips: (pips: number) => void;
+  setCustomSlPrice: (price: string) => void;
+  setCustomTpPrice: (price: string) => void;
+  setSelectedRR: (rr: number) => void;
   setPlaySpeed: (speed: number) => void;
   togglePlay: () => void;
   stepForward: () => void;
   resetSimulation: () => void;
+
+  // Active Position Management
   openPosition: (direction: "buy" | "sell") => void;
   closePosition: () => void;
+  updateActiveSl: (price: number | undefined) => void;
+  updateActiveTp: (price: number | undefined) => void;
+  nudgeActiveSl: (deltaPips: number) => void;
+  nudgeActiveTp: (deltaPips: number) => void;
+  setSlToBreakEven: () => void;
   saveCurrentSession: () => void;
+  deleteSession: (id: string) => void;
+  clearTrades: () => void;
 }
 
 export const useBacktestStore = create<BacktestState>((set, get) => {
   const initialAsset = "XAUUSD";
-  const initialCandles = generateInitialCandles(initialAsset, 150);
-  const startReveal = 60;
+  const initialCandles = generateDataset(initialAsset, 300);
+  const startReveal = 100;
 
   return {
     asset: initialAsset,
@@ -143,54 +189,71 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
     isPlaying: false,
     playSpeed: 1,
     lotSize: 1.0,
-    spread: 1.5,
-    slPips: "30",
-    tpPips: "60",
+    spreadPips: 1.5,
+
+    // Free TP & SL Defaults
+    tpMode: "rr",
+    slEnabled: true,
+    tpEnabled: true,
+    slPips: 30,
+    tpPips: 60,
+    customSlPrice: "",
+    customTpPrice: "",
+    selectedRR: 2, // 1:2 default
+
     activePosition: null,
     closedTrades: [],
     savedSessions: [
       {
         id: "sess-1",
-        name: "London Gold Breakout",
+        name: "Gold London Breakout 1:2 RR",
         asset: "XAUUSD",
         timeframe: "15m",
         startingBalance: 10000,
-        endingBalance: 11420,
+        endingBalance: 11480,
         totalTrades: 6,
         winRate: 66.7,
-        netPnl: 1420,
+        netPnl: 1480,
         date: "2026-09-22",
       },
       {
         id: "sess-2",
-        name: "Nasdaq Opening Range",
+        name: "Nasdaq Trend Pullback",
         asset: "NAS100",
         timeframe: "5m",
         startingBalance: 25000,
-        endingBalance: 26850,
-        totalTrades: 4,
-        winRate: 75.0,
-        netPnl: 1850,
+        endingBalance: 27120,
+        totalTrades: 5,
+        winRate: 80.0,
+        netPnl: 2120,
         date: "2026-09-21",
       },
     ],
 
     setAsset: (newAsset) => {
-      const newCandles = generateInitialCandles(newAsset, 150);
+      const newCandles = generateDataset(newAsset, 300);
       set({
         asset: newAsset,
         candles: newCandles,
-        visibleIndex: 60,
+        visibleIndex: 100,
         activePosition: null,
         isPlaying: false,
+        customSlPrice: "",
+        customTpPrice: "",
       });
     },
 
     setTimeframe: (tf) => set({ timeframe: tf }),
     setLotSize: (lot) => set({ lotSize: lot }),
-    setSpread: (spread) => set({ spread }),
+    setSpreadPips: (spreadPips) => set({ spreadPips }),
+    setTpMode: (tpMode) => set({ tpMode }),
+    setSlEnabled: (slEnabled) => set({ slEnabled }),
+    setTpEnabled: (tpEnabled) => set({ tpEnabled }),
     setSlPips: (slPips) => set({ slPips }),
     setTpPips: (tpPips) => set({ tpPips }),
+    setCustomSlPrice: (customSlPrice) => set({ customSlPrice }),
+    setCustomTpPrice: (customTpPrice) => set({ customTpPrice }),
+    setSelectedRR: (selectedRR) => set({ selectedRR }),
     setPlaySpeed: (playSpeed) => set({ playSpeed }),
 
     togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
@@ -200,24 +263,25 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       let nextIndex = state.visibleIndex + 1;
       let candles = [...state.candles];
 
-      // If we reach the end of generated candles, append a new realistic candle
+      // If approaching dataset end, dynamically generate more continuous bars
       if (nextIndex >= candles.length) {
         const last = candles[candles.length - 1];
-        const volatility = state.asset === "EURUSD" ? 0.0008 : state.asset === "BTCUSD" ? 180 : 1.8;
+        const volatility =
+          state.asset === "EURUSD" ? 0.0009 : state.asset === "BTCUSD" ? 220 : 2.2;
         const change = (Math.random() - 0.49) * volatility;
         const open = last.close;
         const close = open + change;
         const high = Math.max(open, close) + Math.random() * volatility * 0.5;
         const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-        const now = new Date();
+        const decimals = state.asset === "EURUSD" ? 4 : 2;
 
         candles.push({
-          time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          open: Number(open.toFixed(state.asset === "EURUSD" ? 4 : 2)),
-          high: Number(high.toFixed(state.asset === "EURUSD" ? 4 : 2)),
-          low: Number(low.toFixed(state.asset === "EURUSD" ? 4 : 2)),
-          close: Number(close.toFixed(state.asset === "EURUSD" ? 4 : 2)),
-          volume: Math.floor(Math.random() * 500) + 100,
+          time: last.time + 900,
+          open: Number(open.toFixed(decimals)),
+          high: Number(high.toFixed(decimals)),
+          low: Number(low.toFixed(decimals)),
+          close: Number(close.toFixed(decimals)),
+          volume: Math.floor(Math.random() * 800) + 150,
         });
       }
 
@@ -226,46 +290,66 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       let newBalance = state.balance;
       let newClosedTrades = [...state.closedTrades];
 
-      // Update active position floating P&L
+      // Process live position
       if (activePos && currentCandle) {
-        const priceDiff =
-          activePos.direction === "buy"
-            ? currentCandle.close - activePos.entryPrice
-            : activePos.entryPrice - currentCandle.close;
+        const multiplier = getAssetMultiplier(state.asset);
 
-        // Lot calculation multiplier
-        const multiplier = state.asset === "EURUSD" ? 100000 : state.asset === "XAUUSD" ? 100 : 1;
-        const floatingPnl = Number((priceDiff * activePos.lotSize * multiplier).toFixed(2));
-        const pnlPct = Number(((floatingPnl / state.balance) * 100).toFixed(2));
+        // Check Take Profit trigger
+        let hitTP = false;
+        let hitSL = false;
 
-        // Check SL / TP trigger
-        let shouldAutoClose = false;
-        if (activePos.slPrice) {
-          if (activePos.direction === "buy" && currentCandle.low <= activePos.slPrice) shouldAutoClose = true;
-          if (activePos.direction === "sell" && currentCandle.high >= activePos.slPrice) shouldAutoClose = true;
-        }
         if (activePos.tpPrice) {
-          if (activePos.direction === "buy" && currentCandle.high >= activePos.tpPrice) shouldAutoClose = true;
-          if (activePos.direction === "sell" && currentCandle.low <= activePos.tpPrice) shouldAutoClose = true;
+          if (activePos.direction === "buy" && currentCandle.high >= activePos.tpPrice) {
+            hitTP = true;
+          } else if (activePos.direction === "sell" && currentCandle.low <= activePos.tpPrice) {
+            hitTP = true;
+          }
         }
 
-        if (shouldAutoClose) {
-          newBalance = Number((state.balance + floatingPnl).toFixed(2));
+        if (activePos.slPrice) {
+          if (activePos.direction === "buy" && currentCandle.low <= activePos.slPrice) {
+            hitSL = true;
+          } else if (activePos.direction === "sell" && currentCandle.high >= activePos.slPrice) {
+            hitSL = true;
+          }
+        }
+
+        if (hitTP || hitSL) {
+          const exitPrice = hitTP ? activePos.tpPrice! : activePos.slPrice!;
+          const priceDiff =
+            activePos.direction === "buy"
+              ? exitPrice - activePos.entryPrice
+              : activePos.entryPrice - exitPrice;
+
+          const realizedPnl = Number((priceDiff * activePos.lotSize * multiplier).toFixed(2));
+          newBalance = Number((state.balance + realizedPnl).toFixed(2));
+
           newClosedTrades.unshift({
             id: `trade-${Date.now()}`,
             asset: activePos.asset,
             direction: activePos.direction,
             lotSize: activePos.lotSize,
             entryPrice: activePos.entryPrice,
-            exitPrice: currentCandle.close,
+            exitPrice,
             entryTime: activePos.entryTime,
             exitTime: currentCandle.time,
-            pnl: floatingPnl,
-            pnlPercent: pnlPct,
-            riskReward: Math.abs(Number((floatingPnl / 100).toFixed(1))),
+            pnl: realizedPnl,
+            pnlPercent: Number(((realizedPnl / state.balance) * 100).toFixed(2)),
+            riskReward: Math.abs(Number((realizedPnl / 100).toFixed(1))),
+            exitReason: hitTP ? "TP" : "SL",
           });
+
           activePos = null;
         } else {
+          // Floating P&L update
+          const priceDiff =
+            activePos.direction === "buy"
+              ? currentCandle.close - activePos.entryPrice
+              : activePos.entryPrice - currentCandle.close;
+
+          const floatingPnl = Number((priceDiff * activePos.lotSize * multiplier).toFixed(2));
+          const pnlPct = Number(((floatingPnl / state.balance) * 100).toFixed(2));
+
           activePos = {
             ...activePos,
             currentPrice: currentCandle.close,
@@ -275,7 +359,9 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         }
       }
 
-      const currentEquity = activePos ? Number((newBalance + activePos.pnl).toFixed(2)) : newBalance;
+      const currentEquity = activePos
+        ? Number((newBalance + activePos.pnl).toFixed(2))
+        : newBalance;
 
       set({
         candles,
@@ -289,10 +375,10 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     resetSimulation: () => {
       const state = get();
-      const freshCandles = generateInitialCandles(state.asset, 150);
+      const freshCandles = generateDataset(state.asset, 300);
       set({
         candles: freshCandles,
-        visibleIndex: 60,
+        visibleIndex: 100,
         activePosition: null,
         isPlaying: false,
         balance: state.startingBalance,
@@ -312,18 +398,41 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       }
 
       const entryPrice = currentCandle.close;
-      const slNum = parseFloat(state.slPips);
-      const tpNum = parseFloat(state.tpPips);
-      const pipValue = state.asset === "EURUSD" ? 0.0001 : 1.0;
+      const pip = getPipUnit(state.asset);
+      const decimals = state.asset === "EURUSD" ? 4 : 2;
 
       let slPrice: number | undefined;
       let tpPrice: number | undefined;
 
-      if (!isNaN(slNum) && slNum > 0) {
-        slPrice = direction === "buy" ? entryPrice - slNum * pipValue : entryPrice + slNum * pipValue;
+      // 1. Calculate Stop Loss if enabled
+      if (state.slEnabled) {
+        if (state.tpMode === "price" && state.customSlPrice && !isNaN(parseFloat(state.customSlPrice))) {
+          slPrice = Number(parseFloat(state.customSlPrice).toFixed(decimals));
+        } else if (state.slPips > 0) {
+          slPrice =
+            direction === "buy"
+              ? Number((entryPrice - state.slPips * pip).toFixed(decimals))
+              : Number((entryPrice + state.slPips * pip).toFixed(decimals));
+        }
       }
-      if (!isNaN(tpNum) && tpNum > 0) {
-        tpPrice = direction === "buy" ? entryPrice + tpNum * pipValue : entryPrice - tpNum * pipValue;
+
+      // 2. Calculate Take Profit if enabled
+      if (state.tpEnabled) {
+        if (state.tpMode === "price" && state.customTpPrice && !isNaN(parseFloat(state.customTpPrice))) {
+          tpPrice = Number(parseFloat(state.customTpPrice).toFixed(decimals));
+        } else if (state.tpMode === "rr" && slPrice && state.selectedRR > 0) {
+          const slDistance = Math.abs(entryPrice - slPrice);
+          const tpDistance = slDistance * state.selectedRR;
+          tpPrice =
+            direction === "buy"
+              ? Number((entryPrice + tpDistance).toFixed(decimals))
+              : Number((entryPrice - tpDistance).toFixed(decimals));
+        } else if (state.tpPips > 0) {
+          tpPrice =
+            direction === "buy"
+              ? Number((entryPrice + state.tpPips * pip).toFixed(decimals))
+              : Number((entryPrice - state.tpPips * pip).toFixed(decimals));
+        }
       }
 
       const newPos: BacktestPosition = {
@@ -361,10 +470,11 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         entryPrice: pos.entryPrice,
         exitPrice,
         entryTime: pos.entryTime,
-        exitTime: currentCandle?.time || "Now",
+        exitTime: currentCandle?.time || Math.floor(Date.now() / 1000),
         pnl: realizedPnl,
         pnlPercent: pos.pnlPercent,
         riskReward: Math.abs(Number((realizedPnl / 100).toFixed(1))),
+        exitReason: "Manual",
       };
 
       set({
@@ -373,6 +483,56 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         activePosition: null,
         closedTrades: [closedTrade, ...state.closedTrades],
       });
+    },
+
+    updateActiveSl: (price) => {
+      set((state) => {
+        if (!state.activePosition) return state;
+        return {
+          activePosition: {
+            ...state.activePosition,
+            slPrice: price,
+          },
+        };
+      });
+    },
+
+    updateActiveTp: (price) => {
+      set((state) => {
+        if (!state.activePosition) return state;
+        return {
+          activePosition: {
+            ...state.activePosition,
+            tpPrice: price,
+          },
+        };
+      });
+    },
+
+    nudgeActiveSl: (deltaPips: number) => {
+      const state = get();
+      if (!state.activePosition) return;
+      const pip = getPipUnit(state.asset);
+      const decimals = state.asset === "EURUSD" ? 4 : 2;
+      const currentSl = state.activePosition.slPrice ?? state.activePosition.entryPrice;
+      const newSl = Number((currentSl + deltaPips * pip).toFixed(decimals));
+      state.updateActiveSl(newSl);
+    },
+
+    nudgeActiveTp: (deltaPips: number) => {
+      const state = get();
+      if (!state.activePosition) return;
+      const pip = getPipUnit(state.asset);
+      const decimals = state.asset === "EURUSD" ? 4 : 2;
+      const currentTp = state.activePosition.tpPrice ?? state.activePosition.entryPrice;
+      const newTp = Number((currentTp + deltaPips * pip).toFixed(decimals));
+      state.updateActiveTp(newTp);
+    },
+
+    setSlToBreakEven: () => {
+      const state = get();
+      if (!state.activePosition) return;
+      state.updateActiveSl(state.activePosition.entryPrice);
     },
 
     saveCurrentSession: () => {
@@ -384,7 +544,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
       const newSession: BacktestSessionRecord = {
         id: `sess-${Date.now()}`,
-        name: `${state.asset} ${state.timeframe} Session`,
+        name: `${state.asset} (${state.timeframe}) - ${state.closedTrades.length} Trades`,
         asset: state.asset,
         timeframe: state.timeframe,
         startingBalance: state.startingBalance,
@@ -398,6 +558,16 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       set({
         savedSessions: [newSession, ...state.savedSessions],
       });
+    },
+
+    deleteSession: (id: string) => {
+      set((state) => ({
+        savedSessions: state.savedSessions.filter((s) => s.id !== id),
+      }));
+    },
+
+    clearTrades: () => {
+      set({ closedTrades: [] });
     },
   };
 });
