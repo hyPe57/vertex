@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn, calculateRR, getEmotionLabel, getEmotionColor } from "@/lib/utils";
 import { mockTags } from "@/lib/mock-data";
 import { useTradeStore } from "@/stores";
-import type { Trade } from "@/types";
+import type { Trade, Session } from "@/types";
 import {
   UploadCloud,
   Zap,
@@ -15,6 +15,7 @@ import {
   Check,
   Maximize2,
   Image as ImageIcon,
+  Globe,
 } from "lucide-react";
 
 interface AttachedImage {
@@ -23,6 +24,22 @@ interface AttachedImage {
   name: string;
   size: string;
 }
+
+function getDefaultSession(): Session {
+  if (typeof window === "undefined") return "london";
+  const utcHour = new Date().getUTCHours();
+  if (utcHour >= 13 && utcHour < 16) return "overlap";
+  if (utcHour >= 8 && utcHour < 16) return "london";
+  if (utcHour >= 16 && utcHour < 22) return "new_york";
+  return "asian";
+}
+
+const SESSION_OPTIONS: { id: Session; label: string; flag: string }[] = [
+  { id: "asian", label: "Asian", flag: "🌏" },
+  { id: "london", label: "London", flag: "🇬🇧" },
+  { id: "new_york", label: "New York", flag: "🇺🇸" },
+  { id: "overlap", label: "Overlap", flag: "⚡" },
+];
 
 const emotionColors = [
   "bg-rose-500/80",
@@ -35,6 +52,7 @@ const emotionColors = [
 export function QuickLog() {
   const [asset, setAsset] = useState("");
   const [direction, setDirection] = useState<"long" | "short">("long");
+  const [session, setSession] = useState<Session>(getDefaultSession);
   const [entry, setEntry] = useState("");
   const [exit, setExit] = useState("");
   const [sl, setSl] = useState("");
@@ -173,7 +191,7 @@ export function QuickLog() {
       swap: 0,
       emotionLevel: emotion || 4,
       notes: notes || "Trade logged via QuickLog",
-      session: "london",
+      session: session,
       status: "closed",
       isBacktest: false,
       tags: selectedTags.length > 0 ? selectedTags : ["Manual"],
@@ -200,6 +218,7 @@ export function QuickLog() {
       setTp("");
       setLotSize("");
       setNotes("");
+      setSession(getDefaultSession());
       setAttachedImages([]);
     }, 1500);
   };
@@ -322,7 +341,43 @@ export function QuickLog() {
           </div>
         </div>
 
-        {/* 3. Entry & Exit Prices */}
+        {/* 3. Trading Session */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Session
+            </label>
+            <span className="text-[10px] text-neutral-400 font-medium">
+              {session === "asian" && "🌏 Tokyo / Sydney"}
+              {session === "london" && "🇬🇧 London"}
+              {session === "new_york" && "🇺🇸 New York"}
+              {session === "overlap" && "⚡ London + NY Overlap"}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1 p-0.5 rounded-xl bg-white/[0.025] border border-white/[0.05]">
+            {SESSION_OPTIONS.map((item) => {
+              const isSelected = session === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSession(item.id)}
+                  className={cn(
+                    "h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    isSelected
+                      ? "bg-white/[0.1] text-white shadow-xs border border-white/[0.08]"
+                      : "text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.02]"
+                  )}
+                >
+                  <span className="text-[11px]">{item.flag}</span>
+                  <span className="text-[11px]">{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 4. Entry & Exit Prices */}
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">

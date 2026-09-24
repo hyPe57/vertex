@@ -91,6 +91,24 @@ export function EditDrawer({ isOpen, onClose, trade, onSave }: EditDrawerProps) 
               { value: "short", label: "Short" },
             ]}
           />
+          <Input 
+            label="Lot Size" 
+            type="number"
+            step="any"
+            value={formData.lotSize ?? ""} 
+            onChange={(e) => handleChange("lotSize", parseFloat(e.target.value))}
+          />
+          <Select
+            label="Trading Session"
+            value={formData.session || "london"}
+            onChange={(e) => handleChange("session", e.target.value)}
+            options={[
+              { value: "asian", label: "🌏 Asian" },
+              { value: "london", label: "🇬🇧 London" },
+              { value: "new_york", label: "🇺🇸 New York" },
+              { value: "overlap", label: "⚡ Overlap" },
+            ]}
+          />
         </div>
 
         {/* Trade Params */}

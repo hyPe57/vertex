@@ -92,8 +92,8 @@ export function RecentTradesCard() {
                         </button>
                       )}
                     </div>
-                    <span className="text-[10px] text-neutral-500 tabular-nums">
-                      {trade.lotSize} lots · {trade.tags?.[0] ? `#${trade.tags[0]}` : "Manual"}
+                    <span className="text-[10px] text-neutral-500 tabular-nums capitalize">
+                      {trade.lotSize} lots · {trade.session ? trade.session.replace("_", " ") : "london"} · {trade.tags?.[0] ? `#${trade.tags[0]}` : "Manual"}
                     </span>
                   </div>
                 </div>
