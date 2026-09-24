@@ -103,7 +103,7 @@ export function CumulativePnlChart({ trades }: CumulativePnlChartProps) {
   }
 
   return (
-    <div className="w-full">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] h-full flex flex-col justify-between">
       <div className="flex items-center justify-between mb-4">
         <div>
           <span className="text-xs font-medium text-neutral-400">Cumulative Return Curve</span>

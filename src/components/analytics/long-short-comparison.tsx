@@ -31,7 +31,7 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
   const shortPercent = totalCount > 0 ? (short.count / totalCount) * 100 : 50;
 
   return (
-    <div className="w-full">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] h-full flex flex-col justify-between">
       <div className="flex items-center justify-between mb-4">
         <span className="text-xs font-medium text-neutral-400">Directional Bias & Edge</span>
         <span className="text-[10px] text-neutral-400 font-mono">

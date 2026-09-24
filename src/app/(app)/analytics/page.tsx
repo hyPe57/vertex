@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTradeStore } from "@/stores";
 import { cn, formatCurrency } from "@/lib/utils";
 import type { Trade } from "@/types";
@@ -12,23 +11,21 @@ import {
   ShieldAlert,
   ArrowUpRight,
   ArrowDownRight,
-  Flame,
-  Award,
-  Zap,
 } from "lucide-react";
 
 // ─── Analytics Components ───
 import { CumulativePnlChart } from "@/components/analytics/cumulative-pnl-chart";
-import { EmotionCorrelation } from "@/components/analytics/emotion-correlation";
+import { WinLossDonut } from "@/components/analytics/win-loss-donut";
+import { AssetDonutChart } from "@/components/analytics/asset-donut-chart";
 import { LongShortComparison } from "@/components/analytics/long-short-comparison";
 import { RMultipleChart } from "@/components/analytics/r-multiple-chart";
-import { AssetPerformance } from "@/components/analytics/asset-performance";
 import { SessionBreakdown } from "@/components/analytics/session-breakdown";
+import { DayOfWeekChart } from "@/components/analytics/day-of-week-chart";
+import { EmotionCorrelation } from "@/components/analytics/emotion-correlation";
 import { DurationBreakdown } from "@/components/analytics/duration-breakdown";
 
-// ─── Filter & Tab Definitions ───
+// ─── Period Filter Types ───
 type Period = "today" | "week" | "month" | "year" | "all";
-type TabId = "overview" | "execution" | "psychology";
 
 const PERIOD_OPTIONS: { id: Period; label: string }[] = [
   { id: "today", label: "Today" },
@@ -36,12 +33,6 @@ const PERIOD_OPTIONS: { id: Period; label: string }[] = [
   { id: "month", label: "This Month" },
   { id: "year", label: "This Year" },
   { id: "all", label: "All Time" },
-];
-
-const TABS: { id: TabId; label: string; count?: string }[] = [
-  { id: "overview", label: "Overview & Growth" },
-  { id: "execution", label: "Execution Edge" },
-  { id: "psychology", label: "Psychology & Timing" },
 ];
 
 // ─── Period Filter Logic ───
@@ -76,7 +67,7 @@ function filterTradesByPeriod(trades: Trade[], period: Period): Trade[] {
   return trades.filter((t) => new Date(t.openTime) >= cutoff);
 }
 
-// ─── Performance Calculation ───
+// ─── Pro Journal KPI Calculations ───
 function computeStats(trades: Trade[]) {
   if (trades.length === 0) {
     return {
@@ -84,6 +75,7 @@ function computeStats(trades: Trade[]) {
       winRate: 0,
       wins: 0,
       losses: 0,
+      be: 0,
       totalTrades: 0,
       profitFactor: 0,
       expectancy: 0,
@@ -94,21 +86,20 @@ function computeStats(trades: Trade[]) {
       avgWin: 0,
       avgLoss: 0,
       payoffRatio: 0,
-      maxStreakWin: 0,
-      maxStreakLoss: 0,
     };
   }
 
   const wins = trades.filter((t) => t.pnl > 0);
-  const losses = trades.filter((t) => t.pnl <= 0);
+  const losses = trades.filter((t) => t.pnl < 0);
+  const be = trades.filter((t) => t.pnl === 0);
   const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
   const grossProfit = wins.reduce((sum, t) => sum + t.pnl, 0);
   const grossLoss = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
   const winRate = trades.length > 0 ? (wins.length / trades.length) * 100 : 0;
   const avgWin = wins.length > 0 ? grossProfit / wins.length : 0;
   const avgLoss = losses.length > 0 ? grossLoss / losses.length : 0;
-  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99.9 : 0;
-  const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99.9 : 0;
+  const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? 99.99 : 0;
+  const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? 99.99 : 0;
   const expectancy = (winRate / 100) * avgWin - ((100 - winRate) / 100) * avgLoss;
   const avgRR = trades.reduce((sum, t) => sum + (t.riskReward || 0), 0) / trades.length;
 
@@ -123,25 +114,12 @@ function computeStats(trades: Trade[]) {
     if (dd > maxDD) maxDD = dd;
   }
 
-  // Streaks
-  let currentStreak = 0;
-  let maxWinStreak = 0;
-  let maxLossStreak = 0;
-  trades.forEach((t) => {
-    if (t.pnl > 0) {
-      currentStreak = currentStreak > 0 ? currentStreak + 1 : 1;
-      if (currentStreak > maxWinStreak) maxWinStreak = currentStreak;
-    } else {
-      currentStreak = currentStreak < 0 ? currentStreak - 1 : -1;
-      if (Math.abs(currentStreak) > maxLossStreak) maxLossStreak = Math.abs(currentStreak);
-    }
-  });
-
   return {
     netPnl: totalPnl,
     winRate,
     wins: wins.length,
     losses: losses.length,
+    be: be.length,
     totalTrades: trades.length,
     profitFactor: Math.min(profitFactor, 99.99),
     expectancy,
@@ -152,14 +130,11 @@ function computeStats(trades: Trade[]) {
     avgWin,
     avgLoss,
     payoffRatio: Math.min(payoffRatio, 99.99),
-    maxStreakWin: maxWinStreak,
-    maxStreakLoss: maxLossStreak,
   };
 }
 
 export default function AnalyticsPage() {
   const [period, setPeriod] = useState<Period>("all");
-  const [activeTab, setActiveTab] = useState<TabId>("overview");
   const allTrades = useTradeStore((state) => state.trades);
 
   const filteredTrades = useMemo(
@@ -171,19 +146,24 @@ export default function AnalyticsPage() {
   const isNetPositive = stats.netPnl >= 0;
 
   return (
-    <div className="w-full max-w-[1440px] mx-auto px-4 lg:px-8 py-6 space-y-6">
-      {/* ─── Header: Clean Title + Period Selector ─── */}
+    <div className="w-full px-4 lg:px-8 py-6 space-y-6">
+      {/* ─── Header: Pro Title & Period Selector ─── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.04]">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            Trading Analytics
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.04] text-neutral-400 font-normal">
-              v2.0
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-white">
+              Trading Journal Analytics
+            </h1>
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 font-semibold uppercase tracking-wider">
+              Pro View
             </span>
-          </h1>
+          </div>
           <p className="text-xs text-neutral-400 mt-0.5">
             {filteredTrades.length} trades analyzed · {stats.wins}W / {stats.losses}L · Win Rate{" "}
-            <span className="text-white font-medium">{stats.winRate.toFixed(1)}%</span>
+            <span className="text-white font-medium">{stats.winRate.toFixed(1)}%</span> · Net P&L{" "}
+            <span className={cn("font-medium", isNetPositive ? "text-emerald-400" : "text-rose-400")}>
+              {isNetPositive ? "+" : ""}{formatCurrency(stats.netPnl)}
+            </span>
           </p>
         </div>
 
@@ -206,256 +186,158 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* ─── Linear Style Tab Switcher ─── */}
-      <div className="flex items-center gap-1 border-b border-white/[0.04] pb-1">
-        {TABS.map((tab) => {
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "relative px-4 py-2 text-xs font-medium transition-colors cursor-pointer rounded-lg",
-                isActive ? "text-white" : "text-neutral-400 hover:text-neutral-200"
+      {/* ─── Top Executive KPIs Strip (5 Pro Metrics) ─── */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* Net PnL Card */}
+        <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider">
+              Net P&L
+            </span>
+            <div className="p-1 rounded-md bg-white/[0.02]">
+              {isNetPositive ? (
+                <ArrowUpRight size={13} className="text-emerald-400" />
+              ) : (
+                <ArrowDownRight size={13} className="text-rose-400" />
               )}
-            >
-              {tab.label}
-              {isActive && (
-                <motion.div
-                  layoutId="activeTabUnderline"
-                  className="absolute bottom-[-5px] left-2 right-2 h-[2px] bg-emerald-400 rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-            </button>
-          );
-        })}
+            </div>
+          </div>
+          <div
+            className={cn(
+              "text-2xl font-bold font-mono tracking-tight",
+              isNetPositive ? "text-emerald-400" : "text-rose-400"
+            )}
+          >
+            {isNetPositive ? "+" : ""}
+            {formatCurrency(stats.netPnl)}
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono">
+            {stats.totalTrades} closed trades
+          </div>
+        </div>
+
+        {/* Win Rate Card */}
+        <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider">
+              Win Rate
+            </span>
+            <div className="p-1 rounded-md bg-white/[0.02]">
+              <Target size={13} className="text-neutral-400" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold font-mono tracking-tight text-white">
+            {stats.winRate.toFixed(1)}%
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono">
+            {stats.wins}W · {stats.losses}L {stats.be > 0 ? `· ${stats.be}BE` : ""}
+          </div>
+        </div>
+
+        {/* Profit Factor Card */}
+        <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider">
+              Profit Factor
+            </span>
+            <div className="p-1 rounded-md bg-white/[0.02]">
+              <TrendingUp size={13} className="text-neutral-400" />
+            </div>
+          </div>
+          <div
+            className={cn(
+              "text-2xl font-bold font-mono tracking-tight",
+              stats.profitFactor >= 1.5
+                ? "text-emerald-400"
+                : stats.profitFactor >= 1.0
+                ? "text-amber-400"
+                : "text-rose-400"
+            )}
+          >
+            {stats.profitFactor === 99.99 ? "∞" : stats.profitFactor.toFixed(2)}
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono">
+            Payoff: {stats.payoffRatio === 99.99 ? "∞" : stats.payoffRatio.toFixed(2)}R
+          </div>
+        </div>
+
+        {/* Trade Expectancy Card */}
+        <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider">
+              Expectancy
+            </span>
+            <div className="p-1 rounded-md bg-white/[0.02]">
+              <Gauge size={13} className="text-neutral-400" />
+            </div>
+          </div>
+          <div
+            className={cn(
+              "text-2xl font-bold font-mono tracking-tight",
+              stats.expectancy >= 0 ? "text-emerald-400" : "text-rose-400"
+            )}
+          >
+            {stats.expectancy >= 0 ? "+" : ""}
+            ${Math.abs(stats.expectancy).toFixed(1)}
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono">Edge per closed trade</div>
+        </div>
+
+        {/* Max Drawdown Card */}
+        <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
+          <div className="flex items-center justify-between text-neutral-400">
+            <span className="text-[10px] uppercase font-semibold tracking-wider">
+              Max Drawdown
+            </span>
+            <div className="p-1 rounded-md bg-white/[0.02]">
+              <ShieldAlert size={13} className="text-rose-400" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold font-mono tracking-tight text-rose-400">
+            -${stats.maxDrawdown.toFixed(0)}
+          </div>
+          <div className="text-[10px] text-neutral-400 font-mono">Peak-to-trough drop</div>
+        </div>
       </div>
 
-      {/* ─── Animated Tab Views ─── */}
-      <AnimatePresence mode="wait">
-        {/* ══════════════════════════════════════════════════════════
-            TAB 1: OVERVIEW & GROWTH
-        ══════════════════════════════════════════════════════════ */}
-        {activeTab === "overview" && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            {/* Top KPI Ribbon (Linear minimalist glass) */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Net PnL Card */}
-              <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
-                <div className="flex items-center justify-between text-neutral-400">
-                  <span className="text-[10px] uppercase font-semibold tracking-wider">
-                    Net P&L
-                  </span>
-                  <div className="p-1 rounded-md bg-white/[0.02]">
-                    {isNetPositive ? (
-                      <ArrowUpRight size={13} className="text-emerald-400" />
-                    ) : (
-                      <ArrowDownRight size={13} className="text-rose-400" />
-                    )}
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    "text-2xl font-bold font-mono tracking-tight",
-                    isNetPositive ? "text-emerald-400" : "text-rose-400"
-                  )}
-                >
-                  {isNetPositive ? "+" : ""}
-                  {formatCurrency(stats.netPnl)}
-                </div>
-                <div className="text-[10px] text-neutral-400 font-mono">
-                  {stats.totalTrades} closed positions
-                </div>
-              </div>
+      {/* ─── ROW 1: Cumulative Growth & Win/Loss Donut (8 cols / 4 cols) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-8">
+          <CumulativePnlChart trades={filteredTrades} />
+        </div>
+        <div className="lg:col-span-4">
+          <WinLossDonut trades={filteredTrades} />
+        </div>
+      </div>
 
-              {/* Win Rate Card */}
-              <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
-                <div className="flex items-center justify-between text-neutral-400">
-                  <span className="text-[10px] uppercase font-semibold tracking-wider">
-                    Win Rate
-                  </span>
-                  <div className="p-1 rounded-md bg-white/[0.02]">
-                    <Target size={13} className="text-neutral-400" />
-                  </div>
-                </div>
-                <div className="text-2xl font-bold font-mono tracking-tight text-white">
-                  {stats.winRate.toFixed(1)}%
-                </div>
-                <div className="text-[10px] text-neutral-400 font-mono">
-                  {stats.wins} Wins · {stats.losses} Losses
-                </div>
-              </div>
+      {/* ─── ROW 2: Symbol Allocation & Execution Bias & R-Multiple (4 cols / 4 cols / 4 cols) ─── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-4">
+          <AssetDonutChart trades={filteredTrades} />
+        </div>
+        <div className="lg:col-span-4">
+          <LongShortComparison trades={filteredTrades} />
+        </div>
+        <div className="lg:col-span-4">
+          <RMultipleChart trades={filteredTrades} />
+        </div>
+      </div>
 
-              {/* Profit Factor Card */}
-              <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
-                <div className="flex items-center justify-between text-neutral-400">
-                  <span className="text-[10px] uppercase font-semibold tracking-wider">
-                    Profit Factor
-                  </span>
-                  <div className="p-1 rounded-md bg-white/[0.02]">
-                    <TrendingUp size={13} className="text-neutral-400" />
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    "text-2xl font-bold font-mono tracking-tight",
-                    stats.profitFactor >= 1.5
-                      ? "text-emerald-400"
-                      : stats.profitFactor >= 1.0
-                      ? "text-amber-400"
-                      : "text-rose-400"
-                  )}
-                >
-                  {stats.profitFactor === 99.99 ? "∞" : stats.profitFactor.toFixed(2)}
-                </div>
-                <div className="text-[10px] text-neutral-400 font-mono">
-                  Payoff: {stats.payoffRatio === 99.99 ? "∞" : stats.payoffRatio.toFixed(2)}R
-                </div>
-              </div>
+      {/* ─── ROW 3: Market Timing & Day Edge (6 cols / 6 cols) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <SessionBreakdown trades={filteredTrades} />
+        <DayOfWeekChart trades={filteredTrades} />
+      </div>
 
-              {/* Trade Expectancy Card */}
-              <div className="p-4 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md space-y-2">
-                <div className="flex items-center justify-between text-neutral-400">
-                  <span className="text-[10px] uppercase font-semibold tracking-wider">
-                    Expectancy
-                  </span>
-                  <div className="p-1 rounded-md bg-white/[0.02]">
-                    <Gauge size={13} className="text-neutral-400" />
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    "text-2xl font-bold font-mono tracking-tight",
-                    stats.expectancy >= 0 ? "text-emerald-400" : "text-rose-400"
-                  )}
-                >
-                  {stats.expectancy >= 0 ? "+" : ""}
-                  ${Math.abs(stats.expectancy).toFixed(1)}
-                </div>
-                <div className="text-[10px] text-neutral-400 font-mono">Expected edge per trade</div>
-              </div>
-            </div>
-
-            {/* Main Hero: Cumulative Return Curve */}
-            <div className="p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-              <CumulativePnlChart trades={filteredTrades} />
-            </div>
-
-            {/* Secondary Deep Edge Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3.5 rounded-xl bg-white/[0.015] border border-white/[0.03] space-y-1">
-                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
-                  Max Drawdown
-                </span>
-                <div className="text-sm font-mono font-bold text-rose-400">
-                  -${stats.maxDrawdown.toFixed(0)}
-                </div>
-                <div className="text-[10px] text-neutral-400">Peak-to-trough drop</div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white/[0.015] border border-white/[0.03] space-y-1">
-                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold flex items-center gap-1">
-                  <Award size={11} className="text-amber-400" /> Best Trade
-                </span>
-                <div className="text-sm font-mono font-bold text-emerald-400">
-                  +{formatCurrency(stats.bestTrade)}
-                </div>
-                <div className="text-[10px] text-neutral-400">
-                  Worst: {formatCurrency(stats.worstTrade)}
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white/[0.015] border border-white/[0.03] space-y-1">
-                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">
-                  Avg Win / Loss
-                </span>
-                <div className="text-sm font-mono font-bold text-neutral-200">
-                  +${stats.avgWin.toFixed(0)} / -${stats.avgLoss.toFixed(0)}
-                </div>
-                <div className="text-[10px] text-neutral-400">
-                  Ratio: {stats.payoffRatio.toFixed(1)}:1
-                </div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-white/[0.015] border border-white/[0.03] space-y-1">
-                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold flex items-center gap-1">
-                  <Flame size={11} className="text-amber-500" /> Streaks
-                </span>
-                <div className="text-sm font-mono font-bold text-neutral-200">
-                  {stats.maxStreakWin}W · {stats.maxStreakLoss}L
-                </div>
-                <div className="text-[10px] text-neutral-400">Consecutive runs</div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-            TAB 2: EXECUTION EDGE
-        ══════════════════════════════════════════════════════════ */}
-        {activeTab === "execution" && (
-          <motion.div
-            key="execution"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-              {/* Long vs Short Comparison */}
-              <div className="lg:col-span-6 p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-                <LongShortComparison trades={filteredTrades} />
-              </div>
-
-              {/* R-Multiple Distribution */}
-              <div className="lg:col-span-6 p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-                <RMultipleChart trades={filteredTrades} />
-              </div>
-            </div>
-
-            {/* Instrument / Pair Edge Breakdown */}
-            <div className="p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-              <AssetPerformance trades={filteredTrades} />
-            </div>
-          </motion.div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════
-            TAB 3: PSYCHOLOGY & TIMING
-        ══════════════════════════════════════════════════════════ */}
-        {activeTab === "psychology" && (
-          <motion.div
-            key="psychology"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-6"
-          >
-            {/* Emotion vs Performance (Preserved as requested) */}
-            <EmotionCorrelation />
-
-            {/* Session Breakdown & Holding Duration side by side */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <div className="p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-                <SessionBreakdown trades={filteredTrades} />
-              </div>
-              <div className="p-5 rounded-2xl bg-[#0c0d14]/75 border border-white/[0.04] backdrop-blur-md">
-                <DurationBreakdown trades={filteredTrades} />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ─── ROW 4: Psychology & Trade Duration (7 cols / 5 cols) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div className="lg:col-span-7">
+          <EmotionCorrelation />
+        </div>
+        <div className="lg:col-span-5">
+          <DurationBreakdown trades={filteredTrades} />
+        </div>
+      </div>
     </div>
   );
 }
