@@ -87,19 +87,38 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       if (!res.ok || data.error) {
         throw new Error(data.error || "Connection failed");
       }
+      if (data.resolvedProvider && data.resolvedProvider !== provider) {
+        setProvider(data.resolvedProvider);
+      }
       setTestStatus("success");
     } catch (err: unknown) {
       setTestStatus("error");
-      setTestError((err as Error).message || "Connection failed");
+      const msg = (err as Error).message || "Connection failed";
+      setTestError(msg);
     }
   };
 
   const handleKeyChange = (val: string) => {
+    const trimmed = val.trim();
+    let targetProvider = provider;
+
+    if (trimmed.startsWith("AQ.") || trimmed.startsWith("AIza")) {
+      targetProvider = "gemini";
+    } else if (trimmed.startsWith("sk-ant-")) {
+      targetProvider = "claude";
+    } else if (trimmed.startsWith("sk-or-")) {
+      targetProvider = "openrouter";
+    }
+
+    if (targetProvider !== provider) {
+      setProvider(targetProvider);
+    }
+
     setApiKey(val);
     setTestStatus("idle");
     setTestError(null);
     try {
-      localStorage.setItem(`vertex_ai_key_${provider}`, val);
+      localStorage.setItem(`vertex_ai_key_${targetProvider}`, val);
     } catch {
       // ignore
     }
@@ -284,7 +303,7 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                     ) : testStatus === "error" ? (
                       <span className="flex items-center gap-1 text-red-400 font-medium" title={testError || ""}>
                         <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                        <span>เชื่อมต่อไม่สำเร็จ (ตรวจเช็ค Key)</span>
+                        <span className="truncate max-w-[200px]">{testError || "เชื่อมต่อไม่สำเร็จ (ตรวจเช็ค Key)"}</span>
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 text-emerald-500">

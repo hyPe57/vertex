@@ -25,16 +25,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Default optimal model per provider automatically (No user model selection needed)
-    const MODEL_MAP: Record<string, string> = {
-      openai: "gpt-4o-mini",
-      gemini: "gemini-2.0-flash",
-      deepseek: "deepseek-chat",
-      claude: "claude-3-5-sonnet-20241022",
-      openrouter: "anthropic/claude-3.5-sonnet",
-    };
-
-    const targetModel = MODEL_MAP[provider] || "gpt-4o-mini";
+    // Auto-detect provider if user pasted a key under a mismatched tab
+    let activeProvider = provider;
+    if (trimmedKey.startsWith("AQ.") || trimmedKey.startsWith("AIza")) {
+      activeProvider = "gemini";
+    } else if (trimmedKey.startsWith("sk-ant-")) {
+      activeProvider = "claude";
+    } else if (trimmedKey.startsWith("sk-or-")) {
+      activeProvider = "openrouter";
+    }
 
     // System prompt with trading context
     let systemPrompt = `You are Vertex AI, an elite Trading Coach and Quantitative Journal Analyst.
@@ -47,41 +46,66 @@ ${JSON.stringify(tradingContext, null, 2)}
 Use this actual journal data to answer specific questions about their performance, win rate, emotions, and trade history accurately.`;
     }
 
-    // ── 1. Google Gemini ──────────────────────────────────────
-    if (provider === "gemini") {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${trimmedKey}`;
+    // ── 1. Google Gemini (Supports standard AIza keys & new AQ. keys) ──────
+    if (activeProvider === "gemini") {
+      const candidateModels = [
+        "gemini-2.5-flash",
+        "gemini-1.5-flash",
+        "gemini-3.6-flash",
+        "gemini-1.5-pro",
+        "gemini-2.0-flash-exp",
+      ];
 
       const geminiContents = messages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
       }));
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: systemPrompt }],
-          },
-          contents: geminiContents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 2048,
-          },
-        }),
-      });
+      let lastError = "";
 
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error?.message || `Gemini Error: ${res.statusText}`);
+      for (const model of candidateModels) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(trimmedKey)}`;
+
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": trimmedKey,
+            },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: systemPrompt }],
+              },
+              contents: geminiContents,
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 2048,
+              },
+            }),
+          });
+
+          const data = await res.json();
+          if (!res.ok || data.error) {
+            lastError = data.error?.message || `Gemini Error (${model}): ${res.statusText}`;
+            console.warn(`[Gemini candidate '${model}' failed]:`, lastError);
+            continue; // try next candidate model
+          }
+
+          const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            return NextResponse.json({ reply, resolvedProvider: "gemini", model });
+          }
+        } catch (err: unknown) {
+          lastError = (err as Error).message;
+        }
       }
 
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
-      return NextResponse.json({ reply });
+      throw new Error(lastError || "Google Gemini API connection failed. Please check your API Key.");
     }
 
     // ── 2. Anthropic Claude ──────────────────────────────────
-    if (provider === "claude") {
+    if (activeProvider === "claude") {
       const claudeMessages = messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
@@ -95,7 +119,7 @@ Use this actual journal data to answer specific questions about their performanc
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: targetModel,
+          model: "claude-3-5-sonnet-20241022",
           max_tokens: 2048,
           system: systemPrompt,
           messages: claudeMessages,
@@ -108,20 +132,23 @@ Use this actual journal data to answer specific questions about their performanc
       }
 
       const reply = data.content?.[0]?.text || "No response generated.";
-      return NextResponse.json({ reply });
+      return NextResponse.json({ reply, resolvedProvider: "claude" });
     }
 
     // ── 3. OpenAI / DeepSeek / OpenRouter ────────────────────
     let targetEndpoint = "https://api.openai.com/v1/chat/completions";
+    let targetModel = "gpt-4o-mini";
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${trimmedKey}`,
     };
 
-    if (provider === "deepseek") {
+    if (activeProvider === "deepseek") {
       targetEndpoint = "https://api.deepseek.com/chat/completions";
-    } else if (provider === "openrouter") {
+      targetModel = "deepseek-chat";
+    } else if (activeProvider === "openrouter") {
       targetEndpoint = "https://openrouter.ai/api/v1/chat/completions";
+      targetModel = "anthropic/claude-3.5-sonnet";
       headers["HTTP-Referer"] = "https://vertex-trading.local";
       headers["X-Title"] = "Vertex Trading Journal";
     }
@@ -148,7 +175,7 @@ Use this actual journal data to answer specific questions about their performanc
     }
 
     const reply = data.choices?.[0]?.message?.content || "No response generated.";
-    return NextResponse.json({ reply });
+    return NextResponse.json({ reply, resolvedProvider: activeProvider });
   } catch (err: unknown) {
     const error = err as Error;
     console.error("[AI Chat API Error]:", error);
