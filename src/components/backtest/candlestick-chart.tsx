@@ -50,6 +50,7 @@ export function CandlestickChart() {
   const lastIndexRef = useRef<number>(-1);
   const lastAssetRef = useRef<string>(asset);
   const lastTimeframeRef = useRef<string>(timeframe);
+  const lastCandlesRef = useRef<BacktestCandle[]>(candles);
 
   // Current active / latest candle
   const latestCandle = candles[visibleIndex] || candles[candles.length - 1];
@@ -199,8 +200,12 @@ export function CandlestickChart() {
     const chart = chartRef.current;
     if (!series || !chart) return;
 
-    // Asset or Timeframe changed: reformat precision and reload all candles
-    if (lastAssetRef.current !== asset || lastTimeframeRef.current !== timeframe) {
+    const assetChanged = lastAssetRef.current !== asset;
+    const timeframeChanged = lastTimeframeRef.current !== timeframe;
+    const candlesChanged = lastCandlesRef.current !== candles;
+
+    // Whenever Asset, Timeframe, or Candles array changed:
+    if (assetChanged || timeframeChanged || candlesChanged) {
       series.applyOptions({
         priceFormat: {
           type: "price",
@@ -217,10 +222,17 @@ export function CandlestickChart() {
         close: c.close,
       }));
       series.setData(slice);
+
+      // Reset autoScale and fit content so new price range (e.g. $84k vs $2650 vs $1.08) is centered
       chart.timeScale().fitContent();
-      lastIndexRef.current = visibleIndex;
+      try {
+        chart.priceScale("right").applyOptions({ autoScale: true });
+      } catch (_) {}
+
       lastAssetRef.current = asset;
       lastTimeframeRef.current = timeframe;
+      lastCandlesRef.current = candles;
+      lastIndexRef.current = visibleIndex;
       return;
     }
 
@@ -245,9 +257,6 @@ export function CandlestickChart() {
         close: c.close,
       }));
       series.setData(slice);
-      if (visibleIndex <= 120) {
-        chart.timeScale().fitContent();
-      }
       lastIndexRef.current = visibleIndex;
     }
   }, [candles, visibleIndex, asset, timeframe, decimals]);

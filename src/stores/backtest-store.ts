@@ -326,22 +326,32 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     setAsset: (newAsset) => {
       const state = get();
+      // Provide immediate fallback dataset so chart updates synchronously with zero lag
+      const immediateCandles = generateDataset(newAsset, state.timeframe, 300);
       set({
         asset: newAsset,
+        candles: immediateCandles,
+        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
         customSlPrice: "",
         customTpPrice: "",
+        isLoadingData: true,
       });
       get().fetchMarketCandles(newAsset, state.timeframe);
     },
 
     setTimeframe: (tf) => {
       const state = get();
+      // Provide immediate fallback dataset for new timeframe
+      const immediateCandles = generateDataset(state.asset, tf, 300);
       set({
         timeframe: tf,
+        candles: immediateCandles,
+        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
+        isLoadingData: true,
       });
       get().fetchMarketCandles(state.asset, tf);
     },
