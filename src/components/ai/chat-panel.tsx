@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Bot, User, Sparkles, Key, Eye, EyeOff, Loader2 } from "lucide-react";
+import { X, Send, Bot, User, Sparkles, Key, Eye, EyeOff, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTradeStore } from "@/stores";
 
@@ -23,11 +23,16 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const trades = useTradeStore((state) => state.trades);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
+  const [testError, setTestError] = useState<string | null>(null);
+
   // Load API key for active provider from localStorage
   useEffect(() => {
     try {
       const savedKey = localStorage.getItem(`vertex_ai_key_${provider}`) || "";
       setApiKey(savedKey);
+      setTestStatus("idle");
+      setTestError(null);
     } catch {
       // ignore
     }
@@ -64,8 +69,35 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
     }
   }, [messages, isOpen, isLoading]);
 
+  const handleTestConnection = async () => {
+    if (!apiKey.trim() || testStatus === "testing") return;
+    setTestStatus("testing");
+    setTestError(null);
+    try {
+      const res = await fetch("/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          provider,
+          apiKey: apiKey.trim(),
+          messages: [{ role: "user", content: "Reply 'OK' if you can read this." }],
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Connection failed");
+      }
+      setTestStatus("success");
+    } catch (err: unknown) {
+      setTestStatus("error");
+      setTestError((err as Error).message || "Connection failed");
+    }
+  };
+
   const handleKeyChange = (val: string) => {
     setApiKey(val);
+    setTestStatus("idle");
+    setTestError(null);
     try {
       localStorage.setItem(`vertex_ai_key_${provider}`, val);
     } catch {
@@ -233,6 +265,48 @@ export function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
                 >
                   {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
+              </div>
+
+              {/* Connection Status & Test Button */}
+              <div className="flex items-center justify-between mt-2.5 text-[11px]">
+                {apiKey.trim() ? (
+                  <div className="flex items-center gap-1.5">
+                    {testStatus === "testing" ? (
+                      <span className="flex items-center gap-1 text-[var(--text-secondary)]">
+                        <Loader2 className="w-3 h-3 animate-spin text-brand-500" />
+                        <span>กำลังตรวจสอบ Key...</span>
+                      </span>
+                    ) : testStatus === "success" ? (
+                      <span className="flex items-center gap-1 text-emerald-500 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>เชื่อมต่อสำเร็จ พร้อมใช้งาน!</span>
+                      </span>
+                    ) : testStatus === "error" ? (
+                      <span className="flex items-center gap-1 text-red-400 font-medium" title={testError || ""}>
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>เชื่อมต่อไม่สำเร็จ (ตรวจเช็ค Key)</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-emerald-500">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>บันทึกแล้ว (พิมพ์คุยได้ทันที)</span>
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]">วาง Key เพื่อเริ่มใช้งาน</span>
+                )}
+
+                {apiKey.trim() && (
+                  <button
+                    type="button"
+                    onClick={handleTestConnection}
+                    disabled={testStatus === "testing"}
+                    className="text-brand-500 hover:text-brand-400 font-medium hover:underline transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {testStatus === "testing" ? "กำลังทดสอบ..." : "ทดสอบการเชื่อมต่อ"}
+                  </button>
+                )}
               </div>
             </div>
 
