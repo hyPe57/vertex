@@ -329,14 +329,10 @@ export default function AnalyticsPage() {
         <DayOfWeekChart trades={filteredTrades} />
       </div>
 
-      {/* ─── ROW 4: Psychology & Trade Duration (7 cols / 5 cols) ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        <div className="lg:col-span-7">
-          <EmotionCorrelation />
-        </div>
-        <div className="lg:col-span-5">
-          <DurationBreakdown trades={filteredTrades} />
-        </div>
+      {/* ─── ROW 4: Psychology & Trade Duration (50/50) ─── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <EmotionCorrelation />
+        <DurationBreakdown trades={filteredTrades} />
       </div>
     </div>
   );

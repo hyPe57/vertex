@@ -65,8 +65,8 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export function EmotionCorrelation() {
   return (
-    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] flex flex-col min-h-[340px]">
-      <h3 className="text-sm font-semibold text-neutral-100 tracking-tight mb-4">
+    <Card className="p-5 h-full flex flex-col min-h-[340px]">
+      <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
         Emotion vs Performance
       </h3>
       <div className="flex-1">
@@ -142,6 +142,6 @@ export function EmotionCorrelation() {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   );
 }
