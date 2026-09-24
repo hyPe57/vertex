@@ -42,11 +42,19 @@ export default function BacktestPage() {
     equity,
     startingBalance,
     closedTrades,
+    dataSource,
+    isLoadingData,
+    fetchMarketCandles,
   } = useBacktestStore();
 
   const [isOrderPanelOpen, setIsOrderPanelOpen] = useState(true);
   const [isBottomDrawerOpen, setIsBottomDrawerOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Initial fetch of real market candles
+  useEffect(() => {
+    fetchMarketCandles(asset, timeframe);
+  }, []);
 
   // Global playback timer ensuring replay runs smoothly even when order panel is hidden
   useEffect(() => {
@@ -84,7 +92,7 @@ export default function BacktestPage() {
     <div className="w-full h-[calc(100vh-3.5rem)] flex flex-col bg-[#090a0f] text-neutral-200 overflow-hidden select-none">
       {/* ─── 1. TradingView Top Navigation Toolbar ─── */}
       <div className="h-11 px-3 border-b border-white/[0.06] bg-[#0c0d14] flex items-center justify-between gap-3 shrink-0 z-20">
-        {/* Left: Asset & Timeframe Selectors */}
+        {/* Left: Asset & Timeframe Selectors + Real Market Badge */}
         <div className="flex items-center gap-2">
           {/* Asset Pills */}
           <div className="flex items-center bg-white/[0.03] p-0.5 rounded-lg border border-white/[0.06]">
@@ -124,6 +132,21 @@ export default function BacktestPage() {
                 {tf}
               </button>
             ))}
+          </div>
+
+          {/* Real Market Data Badge */}
+          <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono text-emerald-400">
+            {isLoadingData ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                <span className="text-amber-400 font-medium">Fetching API...</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>{dataSource}</span>
+              </>
+            )}
           </div>
         </div>
 

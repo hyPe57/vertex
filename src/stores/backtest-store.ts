@@ -184,8 +184,11 @@ interface BacktestState {
   activePosition: BacktestPosition | null;
   closedTrades: BacktestTrade[];
   savedSessions: BacktestSessionRecord[];
+  dataSource: string;
+  isLoadingData: boolean;
 
   // Actions
+  fetchMarketCandles: (asset?: string, timeframe?: string) => Promise<void>;
   setAsset: (asset: string) => void;
   setTimeframe: (tf: string) => void;
   setLotSize: (lot: number) => void;
@@ -273,30 +276,74 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       },
     ],
 
+    dataSource: "Real Market (Yahoo Finance)",
+    isLoadingData: false,
+
+    fetchMarketCandles: async (targetAsset, targetTf) => {
+      const state = get();
+      const asset = targetAsset || state.asset;
+      const tf = targetTf || state.timeframe;
+      set({ isLoadingData: true });
+
+      try {
+        const res = await fetch(`/api/market-data?asset=${asset}&timeframe=${tf}`);
+        if (!res.ok) throw new Error("API error");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.candles) && json.candles.length > 0) {
+          const visibleIndex = Math.min(
+            json.candles.length - 1,
+            Math.max(40, Math.floor(json.candles.length * 0.55))
+          );
+          set({
+            asset,
+            timeframe: tf,
+            candles: json.candles,
+            visibleIndex,
+            dataSource: json.source || "Real Historical Data",
+            isLoadingData: false,
+            activePosition: null,
+            isPlaying: false,
+          });
+          return;
+        }
+      } catch (err) {
+        console.warn("API fetch failed, falling back to simulation:", err);
+      }
+
+      // Fallback
+      const fallbackCandles = generateDataset(asset, tf, 300);
+      set({
+        asset,
+        timeframe: tf,
+        candles: fallbackCandles,
+        visibleIndex: 120,
+        dataSource: "Simulation (Offline Fallback)",
+        isLoadingData: false,
+        activePosition: null,
+        isPlaying: false,
+      });
+    },
+
     setAsset: (newAsset) => {
       const state = get();
-      const newCandles = generateDataset(newAsset, state.timeframe, 300);
       set({
         asset: newAsset,
-        candles: newCandles,
-        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
         customSlPrice: "",
         customTpPrice: "",
       });
+      get().fetchMarketCandles(newAsset, state.timeframe);
     },
 
     setTimeframe: (tf) => {
       const state = get();
-      const newCandles = generateDataset(state.asset, tf, 300);
       set({
         timeframe: tf,
-        candles: newCandles,
-        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
       });
+      get().fetchMarketCandles(state.asset, tf);
     },
     setLotSize: (lot) => set({ lotSize: lot }),
     setSpreadPips: (spreadPips) => set({ spreadPips }),
