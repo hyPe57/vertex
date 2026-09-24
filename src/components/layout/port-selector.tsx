@@ -16,42 +16,46 @@ import {
   ArrowLeft,
   Trash2,
   Loader2,
-  Sparkles,
 } from "lucide-react";
 
 const PLATFORM_THEMES: Record<
   string,
-  { label: string; badge: string; color: string; border: string }
+  { label: string; badge: string; color: string; border: string; bg: string }
 > = {
   mt5: {
     label: "MetaTrader 5",
     badge: "MT5",
-    color: "text-emerald-400 bg-emerald-500/10",
-    border: "border-emerald-500/20",
+    color: "text-emerald-400",
+    bg: "bg-emerald-500/15",
+    border: "border-emerald-500/30",
   },
   mt4: {
     label: "MetaTrader 4",
     badge: "MT4",
-    color: "text-sky-400 bg-sky-500/10",
-    border: "border-sky-500/20",
+    color: "text-sky-400",
+    bg: "bg-sky-500/15",
+    border: "border-sky-500/30",
   },
   ctrader: {
     label: "cTrader",
     badge: "cT",
-    color: "text-amber-400 bg-amber-500/10",
-    border: "border-amber-500/20",
+    color: "text-amber-400",
+    bg: "bg-amber-500/15",
+    border: "border-amber-500/30",
   },
   tradelocker: {
     label: "TradeLocker",
     badge: "TL",
-    color: "text-purple-400 bg-purple-500/10",
-    border: "border-purple-500/20",
+    color: "text-purple-400",
+    bg: "bg-purple-500/15",
+    border: "border-purple-500/30",
   },
   topstepx: {
     label: "TopstepX",
     badge: "TX",
-    color: "text-rose-400 bg-rose-500/10",
-    border: "border-rose-500/20",
+    color: "text-rose-400",
+    bg: "bg-rose-500/15",
+    border: "border-rose-500/30",
   },
 };
 
@@ -136,7 +140,6 @@ export function PortSelector() {
     if (!connectName.trim()) return;
 
     setIsConnecting(true);
-    // Realistic short handshake
     await new Promise((res) => setTimeout(res, 800));
 
     addPort({
@@ -186,11 +189,11 @@ export function PortSelector() {
         className={cn(
           "flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer border select-none",
           portSelectorOpen
-            ? "bg-white/[0.08] border-white/20 text-white shadow-xs"
-            : "bg-white/[0.03] border-white/[0.06] text-neutral-300 hover:bg-white/[0.06] hover:border-white/10 hover:text-white"
+            ? "bg-[#1f2233] border-neutral-600 text-white shadow-md"
+            : "bg-[#141520] border-neutral-800 text-neutral-200 hover:bg-[#1c1e2e] hover:border-neutral-700 hover:text-white"
         )}
       >
-        {/* Pulsing Status Dot */}
+        {/* Status Dot */}
         <span className="relative flex h-2 w-2">
           <span
             className={cn(
@@ -215,7 +218,7 @@ export function PortSelector() {
         </span>
 
         {/* Platform Tag */}
-        <span className="font-mono text-[11px] font-semibold text-neutral-400">
+        <span className="font-mono text-[11px] font-bold text-neutral-400">
           {activeTheme.badge}
         </span>
 
@@ -225,7 +228,7 @@ export function PortSelector() {
         </span>
 
         {/* Balance */}
-        <span className="font-mono text-[11px] font-bold text-neutral-200">
+        <span className="font-mono text-[11px] font-bold text-neutral-100">
           {display === "usd"
             ? formatCurrency(activePort.currentBalance, false)
             : `${activePnlPct >= 0 ? "+" : ""}${activePnlPct.toFixed(2)}%`}
@@ -241,13 +244,13 @@ export function PortSelector() {
         </motion.div>
       </button>
 
-      {/* ─── Compact Inline Dropdown (NEVER pops up in center of screen!) ─── */}
+      {/* ─── Compact Solid Dropdown (100% Opaque & High Contrast) ─── */}
       <AnimatePresence>
         {portSelectorOpen && (
           <>
-            {/* Click-away backdrop */}
+            {/* Dark Dim Backdrop for focus */}
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-40 bg-black/50"
               onClick={() => {
                 setPortSelectorOpen(false);
                 setView("list");
@@ -259,21 +262,22 @@ export function PortSelector() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -6, scale: 0.98 }}
               transition={{ type: "spring", damping: 25, stiffness: 380 }}
-              className="absolute top-full right-0 mt-2.5 w-[380px] z-50 rounded-2xl border border-white/[0.08] bg-[#0c0d14]/98 shadow-2xl backdrop-blur-2xl overflow-hidden flex flex-col"
+              className="absolute top-full right-0 mt-2 w-[390px] z-50 rounded-2xl border border-neutral-700 bg-[#12131d] shadow-[0_20px_60px_rgba(0,0,0,0.95)] overflow-hidden flex flex-col"
             >
               {/* ══════════════════════════════════════════════════════
-                  VIEW 1: ACCOUNTS LIST & ACTIVE HERO
+                  VIEW 1: ACCOUNTS LIST & ACTIVE HERO (SOLID)
               ══════════════════════════════════════════════════════ */}
               {view === "list" && (
-                <div className="p-4 space-y-3.5">
+                <div className="p-4 space-y-3.5 bg-[#12131d]">
                   {/* Hero Active Account Card */}
-                  <div className="p-3.5 rounded-xl bg-white/[0.025] border border-white/[0.06] space-y-2.5">
+                  <div className="p-3.5 rounded-xl bg-[#1a1c29] border border-neutral-700/80 space-y-2.5 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span
                           className={cn(
                             "px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border",
                             activeTheme.color,
+                            activeTheme.bg,
                             activeTheme.border
                           )}
                         >
@@ -288,10 +292,10 @@ export function PortSelector() {
                         <button
                           title="Sync Account"
                           onClick={(e) => handleSync(e, activePort.id)}
-                          className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[#25283b] transition-colors cursor-pointer"
                         >
                           <RefreshCw
-                            size={12}
+                            size={13}
                             className={cn(
                               syncingId === activePort.id && "animate-spin text-emerald-400"
                             )}
@@ -300,9 +304,9 @@ export function PortSelector() {
                         <button
                           title="Edit Port"
                           onClick={(e) => handleOpenEdit(e, activePort)}
-                          className="p-1.5 rounded-lg text-neutral-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-neutral-300 hover:text-white hover:bg-[#25283b] transition-colors cursor-pointer"
                         >
-                          <Settings2 size={12} />
+                          <Settings2 size={13} />
                         </button>
                       </div>
                     </div>
@@ -311,7 +315,7 @@ export function PortSelector() {
                     <div className="flex items-baseline justify-between pt-0.5">
                       <div>
                         <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-semibold block mb-0.5">
-                          Balance
+                          Account Balance
                         </span>
                         <div className="text-xl font-bold font-mono text-white tracking-tight">
                           {formatCurrency(activePort.currentBalance, false)}
@@ -328,7 +332,7 @@ export function PortSelector() {
                             isProfit ? "text-emerald-400" : "text-rose-400"
                           )}
                         >
-                          {isProfit ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                          {isProfit ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                           {isProfit ? "+" : ""}
                           {formatCurrency(activePnl)} ({activePnlPct.toFixed(2)}%)
                         </div>
@@ -338,17 +342,17 @@ export function PortSelector() {
 
                   {/* Account Switcher Header */}
                   <div className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-300">
                       Trading Accounts ({ports.length})
                     </span>
 
                     {/* Currency Mode */}
                     <button
                       onClick={toggleDisplay}
-                      className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono text-neutral-400 hover:text-white hover:bg-white/[0.04] transition-colors cursor-pointer"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-[#1c1e2d] border border-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
                     >
                       <span className={cn(display === "usd" && "text-emerald-400 font-bold")}>$</span>
-                      <span className="text-neutral-600">/</span>
+                      <span className="text-neutral-500">/</span>
                       <span className={cn(display === "percent" && "text-emerald-400 font-bold")}>%</span>
                     </button>
                   </div>
@@ -371,8 +375,8 @@ export function PortSelector() {
                           className={cn(
                             "group w-full flex items-center justify-between p-2.5 rounded-xl border transition-all text-left cursor-pointer",
                             isActive
-                              ? "bg-white/[0.06] border-white/15 shadow-xs"
-                              : "bg-white/[0.015] border-white/[0.03] hover:bg-white/[0.04] hover:border-white/10"
+                              ? "bg-[#182827] border-emerald-500/50 shadow-xs"
+                              : "bg-[#171926] border-neutral-800 hover:bg-[#202333] hover:border-neutral-700"
                           )}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
@@ -380,6 +384,7 @@ export function PortSelector() {
                               className={cn(
                                 "w-7 h-7 rounded-lg flex items-center justify-center font-mono text-[10px] font-bold shrink-0 border",
                                 theme.color,
+                                theme.bg,
                                 theme.border
                               )}
                             >
@@ -422,9 +427,9 @@ export function PortSelector() {
                             <button
                               title="Edit Port"
                               onClick={(e) => handleOpenEdit(e, port)}
-                              className="p-1 rounded-md text-neutral-500 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="p-1 rounded-md text-neutral-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                              <Settings2 size={12} />
+                              <Settings2 size={13} />
                             </button>
                           </div>
                         </div>
@@ -433,12 +438,12 @@ export function PortSelector() {
                   </div>
 
                   {/* Connect Button (Inline Switch to View 2) */}
-                  <div className="pt-2 border-t border-white/[0.05]">
+                  <div className="pt-2 border-t border-neutral-800">
                     <button
                       onClick={() => setView("connect")}
-                      className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] hover:border-white/15 text-xs font-semibold text-white transition-all cursor-pointer shadow-xs"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#1e2030] hover:bg-[#272a3f] border border-neutral-700 text-xs font-semibold text-white transition-all cursor-pointer shadow-xs"
                     >
-                      <Plus size={13} className="text-emerald-400" strokeWidth={2.5} />
+                      <Plus size={14} className="text-emerald-400" strokeWidth={2.5} />
                       เชื่อมต่อพอร์ตใหม่ (Connect Account)
                     </button>
                   </div>
@@ -446,15 +451,15 @@ export function PortSelector() {
               )}
 
               {/* ══════════════════════════════════════════════════════
-                  VIEW 2: INLINE CONNECT ACCOUNT FORM
+                  VIEW 2: INLINE CONNECT ACCOUNT FORM (SOLID)
               ══════════════════════════════════════════════════════ */}
               {view === "connect" && (
-                <form onSubmit={handleConnectSubmit} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <form onSubmit={handleConnectSubmit} className="p-4 space-y-3.5 bg-[#12131d]">
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
                     <button
                       type="button"
                       onClick={() => setView("list")}
-                      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-white transition-colors cursor-pointer"
                     >
                       <ArrowLeft size={13} />
                       กลับ (Back)
@@ -467,7 +472,7 @@ export function PortSelector() {
                     <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1.5 block">
                       Platform
                     </label>
-                    <div className="grid grid-cols-5 gap-1">
+                    <div className="grid grid-cols-5 gap-1.5">
                       {PLATFORMS.map((p) => {
                         const isSelected = connectPlatform === p.id;
                         return (
@@ -478,8 +483,8 @@ export function PortSelector() {
                             className={cn(
                               "py-1.5 rounded-lg text-center font-mono text-[10px] font-bold border transition-all cursor-pointer",
                               isSelected
-                                ? "bg-white/[0.1] border-white/25 text-white shadow-xs"
-                                : "bg-white/[0.02] border-white/[0.04] text-neutral-400 hover:text-neutral-200"
+                                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-xs"
+                                : "bg-[#1a1c2b] border-neutral-800 text-neutral-400 hover:text-white hover:bg-[#222436]"
                             )}
                           >
                             {p.tag}
@@ -501,7 +506,7 @@ export function PortSelector() {
                       placeholder="เช่น FTMO 100K, Exness Live"
                       required
                       autoFocus
-                      className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
+                      className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 transition-colors"
                     />
                   </div>
 
@@ -521,10 +526,10 @@ export function PortSelector() {
                               setConnectCurrentBalance(amt.toString());
                             }}
                             className={cn(
-                              "px-1 py-0.2 rounded text-[9px] font-mono transition-colors cursor-pointer",
+                              "px-1.5 py-0.5 rounded text-[9px] font-mono border transition-colors cursor-pointer",
                               connectInitialBalance === amt.toString()
-                                ? "bg-emerald-500/20 text-emerald-400 font-bold"
-                                : "text-neutral-500 hover:text-neutral-300"
+                                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400 font-bold"
+                                : "bg-[#1a1c2b] border-neutral-800 text-neutral-400 hover:text-white"
                             )}
                           >
                             ${amt / 1000}k
@@ -539,7 +544,7 @@ export function PortSelector() {
                         setConnectInitialBalance(e.target.value);
                         setConnectCurrentBalance(e.target.value);
                       }}
-                      className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white focus:outline-none focus:border-white/20 transition-colors font-mono"
+                      className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white focus:outline-none focus:border-neutral-500 transition-colors font-mono"
                     />
                   </div>
 
@@ -554,7 +559,7 @@ export function PortSelector() {
                         value={connectBrokerServer}
                         onChange={(e) => setConnectBrokerServer(e.target.value)}
                         placeholder="FTMO-Server"
-                        className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors"
+                        className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 transition-colors"
                       />
                     </div>
                     <div>
@@ -566,13 +571,13 @@ export function PortSelector() {
                         value={connectAccountNumber}
                         onChange={(e) => setConnectAccountNumber(e.target.value)}
                         placeholder="2094812"
-                        className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors font-mono"
+                        className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500 transition-colors font-mono"
                       />
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/[0.05]">
+                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-800">
                     <button
                       type="button"
                       onClick={() => setView("list")}
@@ -583,7 +588,7 @@ export function PortSelector() {
                     <button
                       type="submit"
                       disabled={isConnecting}
-                      className="px-4 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                     >
                       {isConnecting ? (
                         <>
@@ -602,15 +607,15 @@ export function PortSelector() {
               )}
 
               {/* ══════════════════════════════════════════════════════
-                  VIEW 3: INLINE EDIT PORT FORM
+                  VIEW 3: INLINE EDIT PORT FORM (SOLID)
               ══════════════════════════════════════════════════════ */}
               {view === "edit" && editingTargetPort && (
-                <form onSubmit={handleEditSubmit} className="p-4 space-y-3">
-                  <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+                <form onSubmit={handleEditSubmit} className="p-4 space-y-3.5 bg-[#12131d]">
+                  <div className="flex items-center justify-between pb-2 border-b border-neutral-800">
                     <button
                       type="button"
                       onClick={() => setView("list")}
-                      className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 text-xs text-neutral-300 hover:text-white transition-colors cursor-pointer"
                     >
                       <ArrowLeft size={13} />
                       กลับ (Back)
@@ -627,7 +632,7 @@ export function PortSelector() {
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       required
-                      className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white focus:outline-none focus:border-white/20 transition-colors"
+                      className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white focus:outline-none focus:border-neutral-500 transition-colors"
                     />
                   </div>
 
@@ -641,28 +646,28 @@ export function PortSelector() {
                       onChange={(e) => setEditCurrentBalance(e.target.value)}
                       step="any"
                       required
-                      className="w-full h-8 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 text-xs text-white focus:outline-none focus:border-white/20 transition-colors font-mono"
+                      className="w-full h-9 rounded-lg border border-neutral-700 bg-[#1a1c2b] px-3 text-xs text-white focus:outline-none focus:border-neutral-500 transition-colors font-mono"
                     />
                   </div>
 
                   {/* Delete option */}
                   {ports.length > 1 && (
-                    <div className="pt-2 border-t border-white/[0.05]">
+                    <div className="pt-2 border-t border-neutral-800">
                       {confirmDelete ? (
-                        <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/20 flex items-center justify-between">
-                          <span className="text-[11px] text-rose-400">ยืนยันลบพอร์ตนี้?</span>
-                          <div className="flex items-center gap-1">
+                        <div className="p-2.5 rounded-lg bg-rose-500/15 border border-rose-500/30 flex items-center justify-between">
+                          <span className="text-[11px] text-rose-300 font-medium">ยืนยันลบพอร์ตนี้?</span>
+                          <div className="flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => setConfirmDelete(false)}
-                              className="px-2 py-0.5 rounded text-[10px] text-neutral-400 hover:text-white"
+                              className="px-2 py-1 rounded text-[10px] text-neutral-300 hover:text-white bg-[#1a1c2b]"
                             >
                               ไม่ลบ
                             </button>
                             <button
                               type="button"
                               onClick={handleDeletePort}
-                              className="px-2 py-0.5 rounded bg-rose-500 text-white text-[10px] font-semibold"
+                              className="px-2.5 py-1 rounded bg-rose-500 text-white text-[10px] font-bold hover:bg-rose-600"
                             >
                               ลบเลย
                             </button>
@@ -672,9 +677,9 @@ export function PortSelector() {
                         <button
                           type="button"
                           onClick={() => setConfirmDelete(true)}
-                          className="flex items-center gap-1 text-[11px] text-rose-400/80 hover:text-rose-400 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 text-[11px] text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
                         >
-                          <Trash2 size={11} />
+                          <Trash2 size={12} />
                           ลบพอร์ตนี้ออกจากระบบ
                         </button>
                       )}
@@ -682,7 +687,7 @@ export function PortSelector() {
                   )}
 
                   {/* Actions */}
-                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/[0.05]">
+                  <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-800">
                     <button
                       type="button"
                       onClick={() => setView("list")}
@@ -692,7 +697,7 @@ export function PortSelector() {
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-semibold transition-all cursor-pointer"
+                      className="px-4 py-2 rounded-lg bg-white text-black hover:bg-neutral-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
                     >
                       บันทึก
                     </button>
