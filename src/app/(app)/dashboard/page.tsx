@@ -8,6 +8,7 @@ import { DailyPnlChart } from "@/components/dashboard/daily-pnl-chart";
 import { HourlyHeatmap } from "@/components/dashboard/hourly-heatmap";
 import { InstrumentsCard } from "@/components/dashboard/instruments-card";
 import { QuickLog } from "@/components/dashboard/quick-log";
+import { RecentTradesCard } from "@/components/dashboard/recent-trades";
 
 export default function DashboardPage() {
   return (
@@ -79,9 +80,16 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* Right Column (4 cols): QuickLog - Sits flush at top */}
-        <div className="lg:col-span-4 xl:col-span-4 w-full sticky top-4">
+        {/* Right Column (4 cols): QuickLog + Recent Trades Feed */}
+        <div className="lg:col-span-4 xl:col-span-4 w-full flex flex-col gap-4">
           <QuickLog />
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.15 }}
+          >
+            <RecentTradesCard />
+          </motion.div>
         </div>
       </div>
     </div>

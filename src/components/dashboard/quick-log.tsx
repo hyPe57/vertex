@@ -4,15 +4,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { cn, calculateRR, getEmotionLabel, getEmotionColor } from "@/lib/utils";
 import { mockTags } from "@/lib/mock-data";
-import { Card, Button } from "@/components/ui";
 import { UploadCloud, Zap, X, Plus, Tag as TagIcon } from "lucide-react";
 
 const emotionColors = [
-  "bg-red-500",
-  "bg-orange-500",
-  "bg-yellow-400",
-  "bg-lime-500",
-  "bg-emerald-500",
+  "bg-rose-500/80",
+  "bg-amber-500/80",
+  "bg-yellow-400/80",
+  "bg-emerald-400/80",
+  "bg-teal-400/80",
 ];
 
 export function QuickLog() {
@@ -72,28 +71,31 @@ export function QuickLog() {
       transition={{ duration: 0.35, delay: 0.1 }}
       className="w-full"
     >
-      <Card className="p-5 glass-card flex flex-col gap-4 border border-white/[0.04] bg-[#0c0d14]/75 shadow-xs">
+      <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col gap-4">
         {/* Header */}
         <div className="flex items-center justify-between pb-1">
-          <div className="flex items-center gap-2">
-            <div className="p-1 rounded-md bg-brand-500/10 text-brand-500">
-              <Zap size={14} />
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-400 flex items-center justify-center">
+              <Zap size={13} />
             </div>
-            <h2 className="text-base font-semibold text-[var(--text-primary)]">
-              Quick Log
-            </h2>
+            <div>
+              <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">
+                Quick Log
+              </h2>
+              <p className="text-[11px] text-neutral-400">Fast trade recording</p>
+            </div>
           </div>
           {rr && (
-            <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">
+            <span className="text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               RR 1:{rr}
             </span>
           )}
         </div>
 
-        {/* 1. TRADING MOOD (Placed ABOVE Asset & Direction as requested) */}
+        {/* 1. TRADING MOOD */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
               Trading Mood
             </label>
             {emotion && (
@@ -105,20 +107,20 @@ export function QuickLog() {
               </span>
             )}
           </div>
-          <div className="flex h-7 rounded-lg overflow-hidden border border-white/[0.05] bg-white/[0.02]">
+          <div className="flex h-6 rounded-lg overflow-hidden border border-white/[0.05] bg-white/[0.02]">
             {[1, 2, 3, 4, 5].map((level) => (
               <button
                 key={level}
                 type="button"
                 onClick={() => setEmotion(level)}
                 className={cn(
-                  "flex-1 transition-all duration-150",
+                  "flex-1 transition-all duration-150 cursor-pointer",
                   emotionColors[level - 1],
                   emotion === level
                     ? "opacity-100 shadow-inner"
                     : emotion
-                    ? "opacity-25 hover:opacity-60"
-                    : "opacity-40 hover:opacity-75"
+                    ? "opacity-20 hover:opacity-60"
+                    : "opacity-35 hover:opacity-75"
                 )}
               />
             ))}
@@ -128,7 +130,7 @@ export function QuickLog() {
         {/* 2. Asset & Direction Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Asset
             </label>
             <div className="relative">
@@ -137,10 +139,10 @@ export function QuickLog() {
                 value={asset}
                 onChange={(e) => setAsset(e.target.value)}
                 placeholder="XAUUSD"
-                className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors uppercase"
+                className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors uppercase tabular-nums"
               />
               {!asset && (
-                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[var(--text-tertiary)] italic pointer-events-none">
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-neutral-500 pointer-events-none">
                   Last: XAUUSD
                 </span>
               )}
@@ -148,18 +150,18 @@ export function QuickLog() {
           </div>
 
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Direction
             </label>
-            <div className="flex h-8 rounded-lg p-0.5 bg-white/[0.02] border border-white/[0.05]">
+            <div className="flex h-8 rounded-xl p-0.5 bg-white/[0.025] border border-white/[0.05]">
               <button
                 type="button"
                 onClick={() => setDirection("long")}
                 className={cn(
-                  "flex-1 rounded-md text-xs font-semibold transition-all",
+                  "flex-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
                   direction === "long"
-                    ? "bg-profit/20 text-profit shadow-xs"
-                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                    ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shadow-xs"
+                    : "text-neutral-400 hover:text-neutral-200"
                 )}
               >
                 Long
@@ -168,10 +170,10 @@ export function QuickLog() {
                 type="button"
                 onClick={() => setDirection("short")}
                 className={cn(
-                  "flex-1 rounded-md text-xs font-semibold transition-all",
+                  "flex-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
                   direction === "short"
-                    ? "bg-loss/20 text-loss shadow-xs"
-                    : "text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                    ? "bg-rose-500/15 text-rose-400 border border-rose-500/25 shadow-xs"
+                    : "text-neutral-400 hover:text-neutral-200"
                 )}
               >
                 Short
@@ -183,7 +185,7 @@ export function QuickLog() {
         {/* 3. Entry & Exit Prices */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Entry Price
             </label>
             <input
@@ -192,11 +194,11 @@ export function QuickLog() {
               value={entry}
               onChange={(e) => setEntry(e.target.value)}
               placeholder="2650.50"
-              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors tabular-nums"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Exit Price
             </label>
             <input
@@ -205,7 +207,7 @@ export function QuickLog() {
               value={exit}
               onChange={(e) => setExit(e.target.value)}
               placeholder="2668.20"
-              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors tabular-nums"
             />
           </div>
         </div>
@@ -213,7 +215,7 @@ export function QuickLog() {
         {/* 4. Stop Loss & Take Profit */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Stop Loss (SL)
             </label>
             <input
@@ -222,11 +224,11 @@ export function QuickLog() {
               value={sl}
               onChange={(e) => setSl(e.target.value)}
               placeholder="2642.00"
-              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors tabular-nums"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Take Profit (TP)
             </label>
             <input
@@ -235,7 +237,7 @@ export function QuickLog() {
               value={tp}
               onChange={(e) => setTp(e.target.value)}
               placeholder="2670.00"
-              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors tabular-nums"
             />
           </div>
         </div>
@@ -243,7 +245,7 @@ export function QuickLog() {
         {/* 5. Lot Size & Auto RR Summary */}
         <div className="grid grid-cols-2 gap-3 items-end">
           <div>
-            <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
               Lot Size
             </label>
             <input
@@ -252,28 +254,28 @@ export function QuickLog() {
               value={lotSize}
               onChange={(e) => setLotSize(e.target.value)}
               placeholder="0.50"
-              className="w-full h-8 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs font-mono text-[var(--text-primary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="w-full h-8 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors tabular-nums"
             />
           </div>
-          <div className="h-8 flex items-center justify-between px-2.5 rounded-lg bg-brand-500/5 border border-brand-500/20">
-            <span className="text-[11px] font-medium text-[var(--text-secondary)]">Auto RR</span>
-            <span className="text-xs font-bold font-mono text-brand-400">
+          <div className="h-8 flex items-center justify-between px-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+            <span className="text-[10px] font-medium text-neutral-400">Auto RR</span>
+            <span className="text-xs font-semibold tabular-nums text-neutral-200">
               {rr ? `1:${rr}` : "—"}
             </span>
           </div>
         </div>
 
-        {/* 6. TAGS (Interactive Edit, Add & Remove matching History Drawer) */}
+        {/* 6. TAGS */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-1.5">
-              <TagIcon size={12} className="text-[var(--text-tertiary)]" />
-              <label className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
+              <TagIcon size={11} className="text-neutral-400" />
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
                 Tags
               </label>
             </div>
             {selectedTags.length > 0 && (
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-neutral-500 tabular-nums">
                 {selectedTags.length} selected
               </span>
             )}
@@ -285,13 +287,13 @@ export function QuickLog() {
               {selectedTags.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-brand-500/15 text-brand-400 border border-brand-500/30"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-neutral-200 border border-white/[0.08]"
                 >
                   #{tag}
                   <button
                     type="button"
                     onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-rose-400 text-brand-400/80 p-0.5 transition-colors"
+                    className="hover:text-rose-400 text-neutral-400 p-0.5 transition-colors cursor-pointer"
                   >
                     <X size={10} />
                   </button>
@@ -313,13 +315,13 @@ export function QuickLog() {
                 }
               }}
               placeholder="Add tag and press Enter..."
-              className="flex-1 h-7.5 bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors"
+              className="flex-1 h-7.5 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors"
             />
             <button
               type="button"
               onClick={handleAddTag}
               disabled={!newTagInput.trim()}
-              className="h-7.5 px-2.5 rounded-lg bg-brand-500/15 text-brand-400 hover:bg-brand-500/25 border border-brand-500/30 text-xs font-semibold flex items-center gap-1 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
+              className="h-7.5 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200 border border-white/[0.08] text-xs font-semibold flex items-center gap-1 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
             >
               <Plus size={11} />
               <span>Add</span>
@@ -338,8 +340,8 @@ export function QuickLog() {
                   className={cn(
                     "px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-150 border cursor-pointer",
                     isSelected
-                      ? "border-brand-500/50 bg-brand-500/20 text-brand-300 font-semibold"
-                      : "border-white/[0.04] bg-white/[0.02] text-zinc-400 hover:border-white/[0.1] hover:text-zinc-200"
+                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-semibold"
+                      : "border-white/[0.035] bg-white/[0.015] text-neutral-400 hover:border-white/[0.08] hover:text-neutral-200"
                   )}
                 >
                   #{tagName}
@@ -351,7 +353,7 @@ export function QuickLog() {
 
         {/* 7. Notes */}
         <div>
-          <label className="block text-[11px] font-medium uppercase tracking-wider text-[var(--text-tertiary)] mb-1">
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
             Notes
           </label>
           <textarea
@@ -359,23 +361,26 @@ export function QuickLog() {
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
             placeholder="Trade reasoning, confluence, or mistakes..."
-            className="w-full bg-white/[0.02] border border-white/[0.05] rounded-lg px-2.5 py-1.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-brand-500 transition-colors resize-none"
+            className="w-full bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 py-1.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors resize-none"
           />
         </div>
 
         {/* Screenshot Upload Dropzone */}
         <div>
-          <div className="border border-dashed border-white/[0.06] rounded-lg py-2.5 px-3 flex items-center justify-center gap-2 text-[var(--text-tertiary)] hover:border-brand-500/40 hover:text-brand-500 transition-colors cursor-pointer bg-white/[0.01]">
-            <UploadCloud size={16} className="opacity-70" />
+          <div className="border border-dashed border-white/[0.06] hover:border-white/20 rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer bg-white/[0.015]">
+            <UploadCloud size={15} className="opacity-70" />
             <span className="text-[11px]">Drop chart screenshot here</span>
           </div>
         </div>
 
         {/* Submit */}
-        <Button size="md" className="w-full mt-1">
+        <button
+          type="button"
+          className="w-full h-9 rounded-xl bg-white text-black font-semibold text-xs hover:bg-neutral-200 active:scale-[0.99] transition-all shadow-sm cursor-pointer"
+        >
           Submit Trade Log
-        </Button>
-      </Card>
+        </button>
+      </div>
     </motion.div>
   );
 }
