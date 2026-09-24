@@ -3,424 +3,224 @@
 import { useState, useMemo } from "react";
 import { formatCurrency, cn } from "@/lib/utils";
 
-type MetricMode = "pnl" | "winRate" | "trades";
-
-interface SessionCell {
-  sessionKey: string;
-  sessionName: string;
-  timeWindow: string;
+interface WeekdayStat {
+  day: string;
+  dayFull: string;
   pnl: number;
   trades: number;
   wins: number;
+  losses: number;
+  isBest?: boolean;
 }
 
-interface DayRow {
-  day: string;
-  dayLabel: string;
-  sessions: Record<string, SessionCell>;
-}
-
-const SESSIONS = [
-  { key: "asian", name: "Asian", time: "00:00 - 08:00" },
-  { key: "london", name: "London", time: "08:00 - 13:00" },
-  { key: "ny_overlap", name: "NY Overlap", time: "13:00 - 17:00" },
-  { key: "ny_close", name: "NY Close", time: "17:00 - 22:00" },
-];
-
-const RAW_DATA: DayRow[] = [
-  {
-    day: "Mon",
-    dayLabel: "Monday",
-    sessions: {
-      asian: { sessionKey: "asian", sessionName: "Asian", timeWindow: "00:00 - 08:00", pnl: 140, trades: 2, wins: 2 },
-      london: { sessionKey: "london", sessionName: "London", timeWindow: "08:00 - 13:00", pnl: 520, trades: 3, wins: 2 },
-      ny_overlap: { sessionKey: "ny_overlap", sessionName: "NY Overlap", timeWindow: "13:00 - 17:00", pnl: -180, trades: 2, wins: 1 },
-      ny_close: { sessionKey: "ny_close", sessionName: "NY Close", timeWindow: "17:00 - 22:00", pnl: 0, trades: 0, wins: 0 },
-    },
-  },
-  {
-    day: "Tue",
-    dayLabel: "Tuesday",
-    sessions: {
-      asian: { sessionKey: "asian", sessionName: "Asian", timeWindow: "00:00 - 08:00", pnl: -60, trades: 1, wins: 0 },
-      london: { sessionKey: "london", sessionName: "London", timeWindow: "08:00 - 13:00", pnl: 840, trades: 4, wins: 3 },
-      ny_overlap: { sessionKey: "ny_overlap", sessionName: "NY Overlap", timeWindow: "13:00 - 17:00", pnl: 620, trades: 3, wins: 2 },
-      ny_close: { sessionKey: "ny_close", sessionName: "NY Close", timeWindow: "17:00 - 22:00", pnl: 110, trades: 1, wins: 1 },
-    },
-  },
-  {
-    day: "Wed",
-    dayLabel: "Wednesday",
-    sessions: {
-      asian: { sessionKey: "asian", sessionName: "Asian", timeWindow: "00:00 - 08:00", pnl: 210, trades: 2, wins: 2 },
-      london: { sessionKey: "london", sessionName: "London", timeWindow: "08:00 - 13:00", pnl: -240, trades: 3, wins: 1 },
-      ny_overlap: { sessionKey: "ny_overlap", sessionName: "NY Overlap", timeWindow: "13:00 - 17:00", pnl: 710, trades: 4, wins: 3 },
-      ny_close: { sessionKey: "ny_close", sessionName: "NY Close", timeWindow: "17:00 - 22:00", pnl: -90, trades: 1, wins: 0 },
-    },
-  },
-  {
-    day: "Thu",
-    dayLabel: "Thursday",
-    sessions: {
-      asian: { sessionKey: "asian", sessionName: "Asian", timeWindow: "00:00 - 08:00", pnl: 0, trades: 0, wins: 0 },
-      london: { sessionKey: "london", sessionName: "London", timeWindow: "08:00 - 13:00", pnl: 460, trades: 2, wins: 2 },
-      ny_overlap: { sessionKey: "ny_overlap", sessionName: "NY Overlap", timeWindow: "13:00 - 17:00", pnl: 450, trades: 3, wins: 2 },
-      ny_close: { sessionKey: "ny_close", sessionName: "NY Close", timeWindow: "17:00 - 22:00", pnl: 180, trades: 2, wins: 1 },
-    },
-  },
-  {
-    day: "Fri",
-    dayLabel: "Friday",
-    sessions: {
-      asian: { sessionKey: "asian", sessionName: "Asian", timeWindow: "00:00 - 08:00", pnl: -80, trades: 1, wins: 0 },
-      london: { sessionKey: "london", sessionName: "London", timeWindow: "08:00 - 13:00", pnl: 380, trades: 2, wins: 2 },
-      ny_overlap: { sessionKey: "ny_overlap", sessionName: "NY Overlap", timeWindow: "13:00 - 17:00", pnl: -210, trades: 3, wins: 1 },
-      ny_close: { sessionKey: "ny_close", sessionName: "NY Close", timeWindow: "17:00 - 22:00", pnl: 70, trades: 1, wins: 1 },
-    },
-  },
+const WEEKDAY_DATA: WeekdayStat[] = [
+  { day: "Mon", dayFull: "Monday", pnl: 480, trades: 7, wins: 5, losses: 2 },
+  { day: "Tue", dayFull: "Tuesday", pnl: 1510, trades: 12, wins: 9, losses: 3, isBest: true },
+  { day: "Wed", dayFull: "Wednesday", pnl: 590, trades: 10, wins: 6, losses: 4 },
+  { day: "Thu", dayFull: "Thursday", pnl: 1090, trades: 9, wins: 7, losses: 2 },
+  { day: "Fri", dayFull: "Friday", pnl: 160, trades: 7, wins: 4, losses: 3 },
 ];
 
 export function HourlyHeatmap() {
-  const [metric, setMetric] = useState<MetricMode>("pnl");
+  const [view, setView] = useState<"weekday" | "consistency">("weekday");
 
-  // Calculate day totals
-  const rowsWithTotals = useMemo(() => {
-    return RAW_DATA.map((row) => {
-      let totalPnl = 0;
-      let totalTrades = 0;
-      let totalWins = 0;
+  // Mock 14 weeks of activity for consistency grid
+  const activityWeeks = useMemo(() => {
+    const weeks: { date: string; pnl: number; trades: number }[][] = [];
+    const today = new Date(2026, 8, 23); // Sep 23, 2026
 
-      Object.values(row.sessions).forEach((s) => {
-        totalPnl += s.pnl;
-        totalTrades += s.trades;
-        totalWins += s.wins;
-      });
-
-      const winRate = totalTrades > 0 ? (totalWins / totalTrades) * 100 : 0;
-
-      return {
-        ...row,
-        totalPnl,
-        totalTrades,
-        winRate,
-      };
-    });
-  }, []);
-
-  // Calculate session column totals
-  const sessionTotals = useMemo(() => {
-    const totals: Record<string, { pnl: number; trades: number; wins: number; winRate: number }> = {};
-
-    SESSIONS.forEach((s) => {
-      let pnl = 0;
-      let trades = 0;
-      let wins = 0;
-
-      RAW_DATA.forEach((row) => {
-        const cell = row.sessions[s.key];
-        if (cell) {
-          pnl += cell.pnl;
-          trades += cell.trades;
-          wins += cell.wins;
+    for (let w = 13; w >= 0; w--) {
+      const days = [];
+      for (let d = 0; d < 5; d++) {
+        // Mon-Fri
+        const seed = (w * 5 + d * 7) % 17;
+        const hasTrade = seed % 3 !== 0;
+        let pnl = 0;
+        let trades = 0;
+        if (hasTrade) {
+          trades = (seed % 4) + 1;
+          pnl = seed % 4 === 0 ? -(seed * 35) : seed * 65 + 40;
         }
-      });
-
-      totals[s.key] = {
-        pnl,
-        trades,
-        wins,
-        winRate: trades > 0 ? (wins / trades) * 100 : 0,
-      };
-    });
-
-    return totals;
-  }, []);
-
-  // Grand total
-  const grandTotal = useMemo(() => {
-    let pnl = 0;
-    let trades = 0;
-    let wins = 0;
-
-    rowsWithTotals.forEach((r) => {
-      pnl += r.totalPnl;
-      trades += r.totalTrades;
-      wins += Math.round((r.winRate / 100) * r.totalTrades);
-    });
-
-    return {
-      pnl,
-      trades,
-      winRate: trades > 0 ? (wins / trades) * 100 : 0,
-    };
-  }, [rowsWithTotals]);
-
-  // Find best window
-  const bestWindow = useMemo(() => {
-    return { day: "Tue", dayLabel: "Tuesday", session: "London", pnl: 840, winRate: 75 };
+        days.push({
+          date: `W${14 - w} D${d + 1}`,
+          pnl,
+          trades,
+        });
+      }
+      weeks.push(days);
+    }
+    return weeks;
   }, []);
 
   return (
-    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between">
-      {/* Header with Title and Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">
-              Day & Session Performance
-            </h2>
-            <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full hidden sm:inline-flex items-center gap-1">
-              <span>Best:</span> {bestWindow.dayLabel || "Tuesday"} {bestWindow.session} (+${bestWindow.pnl})
-            </span>
-          </div>
+          <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">
+            Performance Heatmap
+          </h2>
           <p className="text-[11px] text-neutral-400 mt-0.5">
-            Profitability and win-rate across days of the week and global trading sessions
+            Profitability distribution & trading consistency
           </p>
         </div>
 
-        {/* Metric Selector & Legend */}
-        <div className="flex items-center gap-3 self-end sm:self-auto">
-          {/* Toggle Pills */}
-          <div className="flex items-center bg-white/[0.03] border border-white/[0.05] p-0.5 rounded-lg text-xs">
-            <button
-              onClick={() => setMetric("pnl")}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
-                metric === "pnl"
-                  ? "bg-white/[0.08] text-white shadow-xs"
-                  : "text-neutral-400 hover:text-neutral-200"
-              )}
-            >
-              Net P&L
-            </button>
-            <button
-              onClick={() => setMetric("winRate")}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
-                metric === "winRate"
-                  ? "bg-white/[0.08] text-white shadow-xs"
-                  : "text-neutral-400 hover:text-neutral-200"
-              )}
-            >
-              Win Rate
-            </button>
-            <button
-              onClick={() => setMetric("trades")}
-              className={cn(
-                "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
-                metric === "trades"
-                  ? "bg-white/[0.08] text-white shadow-xs"
-                  : "text-neutral-400 hover:text-neutral-200"
-              )}
-            >
-              Trades
-            </button>
-          </div>
+        {/* View Switcher Pill */}
+        <div className="flex items-center bg-white/[0.03] border border-white/[0.05] p-0.5 rounded-lg text-xs">
+          <button
+            onClick={() => setView("weekday")}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
+              view === "weekday"
+                ? "bg-white/[0.08] text-white shadow-xs"
+                : "text-neutral-400 hover:text-neutral-200"
+            )}
+          >
+            By Weekday
+          </button>
+          <button
+            onClick={() => setView("consistency")}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-[11px] font-medium transition-all",
+              view === "consistency"
+                ? "bg-white/[0.08] text-white shadow-xs"
+                : "text-neutral-400 hover:text-neutral-200"
+            )}
+          >
+            Consistency
+          </button>
         </div>
       </div>
 
-      {/* Heatmap Matrix Table */}
-      <div className="overflow-x-auto no-scrollbar pt-1">
-        <table className="w-full text-left border-collapse min-w-[620px]">
-          {/* Table Header: Sessions */}
-          <thead>
-            <tr className="border-b border-white/[0.035]">
-              <th className="pb-2.5 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider w-[75px]">
-                Day
-              </th>
-              {SESSIONS.map((s) => (
-                <th key={s.key} className="pb-2.5 px-2 text-center">
-                  <div className="text-[11px] font-semibold text-neutral-200">{s.name}</div>
-                  <div className="text-[9px] font-medium text-neutral-500 font-mono mt-0.5">
-                    {s.time}
-                  </div>
-                </th>
-              ))}
-              <th className="pb-2.5 text-center px-2 w-[110px]">
-                <div className="text-[11px] font-semibold text-neutral-300">Day Total</div>
-                <div className="text-[9px] font-medium text-neutral-500 mt-0.5">Summary</div>
-              </th>
-            </tr>
-          </thead>
-
-          {/* Table Body: 5 Days (Mon - Fri) */}
-          <tbody className="divide-y divide-white/[0.02]">
-            {rowsWithTotals.map((row) => (
-              <tr key={row.day} className="group hover:bg-white/[0.015] transition-colors">
-                {/* Day Label */}
-                <td className="py-2.5 pr-2">
-                  <span className="text-xs font-semibold text-neutral-200 group-hover:text-white transition-colors">
-                    {row.day}
+      {/* View 1: Minimal 5-Day Weekday Strip */}
+      {view === "weekday" && (
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+          {WEEKDAY_DATA.map((item) => {
+            const winRate = Math.round((item.wins / item.trades) * 100);
+            return (
+              <div
+                key={item.day}
+                className={cn(
+                  "relative rounded-xl p-3 border transition-all duration-200 group flex flex-col justify-between",
+                  item.isBest
+                    ? "bg-emerald-500/[0.06] border-emerald-500/20 hover:border-emerald-500/35"
+                    : "bg-white/[0.015] border-white/[0.035] hover:border-white/[0.08]"
+                )}
+              >
+                {/* Day Header */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-neutral-300 group-hover:text-white transition-colors">
+                    {item.day}
                   </span>
-                </td>
+                  {item.isBest && (
+                    <span className="text-[9px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded-full">
+                      Best
+                    </span>
+                  )}
+                  {!item.isBest && (
+                    <span className="text-[10px] text-neutral-500 tabular-nums">
+                      {item.trades} trades
+                    </span>
+                  )}
+                </div>
 
-                {/* Session Cells */}
-                {SESSIONS.map((s) => {
-                  const cell = row.sessions[s.key];
-                  const hasTrades = cell && cell.trades > 0;
-                  const isProfit = cell && cell.pnl > 0;
-                  const isLoss = cell && cell.pnl < 0;
-                  const winRate = hasTrades ? Math.round((cell.wins / cell.trades) * 100) : 0;
+                {/* Net P&L */}
+                <div className="my-2">
+                  <span className="text-sm sm:text-base font-semibold tabular-nums tracking-tight text-emerald-400 block">
+                    {formatCurrency(item.pnl)}
+                  </span>
+                </div>
 
-                  // Dynamic heat background styling
-                  let bgStyle = "bg-white/[0.015] border-white/[0.03] text-neutral-500";
+                {/* Win Rate Bar & Info */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[10px] text-neutral-400 tabular-nums">
+                    <span>{winRate}% WR</span>
+                    <span className="text-neutral-500">
+                      {item.wins}W-{item.losses}L
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-white/[0.04] overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        item.isBest ? "bg-emerald-400" : "bg-emerald-500/60"
+                      )}
+                      style={{ width: `${winRate}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* View 2: GitHub-Style Consistency Grid (Micro Squares) */}
+      {view === "consistency" && (
+        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Micro Square Grid */}
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+            {/* Weekday labels */}
+            <div className="flex flex-col gap-1 text-[9px] text-neutral-500 font-mono pr-1.5 select-none">
+              <span>M</span>
+              <span>W</span>
+              <span>F</span>
+            </div>
+
+            {/* Columns of 5 days */}
+            {activityWeeks.map((week, wIdx) => (
+              <div key={wIdx} className="flex flex-col gap-1">
+                {week.map((day, dIdx) => {
+                  const hasTrades = day.trades > 0;
+                  const isProfit = day.pnl > 0;
+                  const isLoss = day.pnl < 0;
+
+                  let color = "bg-white/[0.03] border-white/[0.02]";
                   if (hasTrades) {
                     if (isProfit) {
-                      bgStyle =
-                        cell.pnl >= 500
-                          ? "bg-emerald-500/[0.16] border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/[0.22]"
-                          : "bg-emerald-500/[0.08] border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/[0.14]";
+                      color =
+                        day.pnl > 300
+                          ? "bg-emerald-400 border-emerald-400/40"
+                          : "bg-emerald-500/50 border-emerald-500/30";
                     } else if (isLoss) {
-                      bgStyle =
-                        cell.pnl <= -200
-                          ? "bg-rose-500/[0.16] border-rose-500/30 text-rose-400 hover:bg-rose-500/[0.22]"
-                          : "bg-rose-500/[0.08] border-rose-500/20 text-rose-400 hover:bg-rose-500/[0.14]";
-                    } else {
-                      bgStyle = "bg-white/[0.03] border-white/[0.06] text-neutral-300";
+                      color = "bg-rose-500/60 border-rose-500/40";
                     }
                   }
 
                   return (
-                    <td key={s.key} className="py-1.5 px-1.5">
-                      <div
-                        className={cn(
-                          "rounded-xl border p-2 flex flex-col items-center justify-center transition-all duration-150 h-14",
-                          bgStyle
-                        )}
-                      >
-                        {hasTrades ? (
-                          <>
-                            {metric === "pnl" && (
-                              <span className="text-xs font-semibold tabular-nums tracking-tight">
-                                {formatCurrency(cell.pnl)}
-                              </span>
-                            )}
-                            {metric === "winRate" && (
-                              <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                                {winRate}%
-                              </span>
-                            )}
-                            {metric === "trades" && (
-                              <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                                {cell.trades} {cell.trades === 1 ? "trade" : "trades"}
-                              </span>
-                            )}
-
-                            {/* Subtitle info */}
-                            <span className="text-[10px] opacity-75 font-normal tabular-nums mt-0.5">
-                              {metric === "pnl"
-                                ? `${cell.trades}t · ${winRate}%`
-                                : metric === "winRate"
-                                ? `${formatCurrency(cell.pnl)} (${cell.trades}t)`
-                                : `${formatCurrency(cell.pnl)}`}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-xs text-neutral-600 font-mono">—</span>
-                        )}
-                      </div>
-                    </td>
+                    <div
+                      key={dIdx}
+                      title={`${day.date}: ${hasTrades ? formatCurrency(day.pnl) : "No trades"}`}
+                      className={cn(
+                        "w-3 h-3 rounded-[3px] border transition-transform hover:scale-125 cursor-default",
+                        color
+                      )}
+                    />
                   );
                 })}
-
-                {/* Day Total Cell */}
-                <td className="py-1.5 pl-2">
-                  <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-2 flex flex-col items-center justify-center h-14">
-                    {metric === "pnl" && (
-                      <span
-                        className={cn(
-                          "text-xs font-semibold tabular-nums tracking-tight",
-                          row.totalPnl >= 0 ? "text-emerald-400" : "text-rose-400"
-                        )}
-                      >
-                        {formatCurrency(row.totalPnl)}
-                      </span>
-                    )}
-                    {metric === "winRate" && (
-                      <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                        {Math.round(row.winRate)}%
-                      </span>
-                    )}
-                    {metric === "trades" && (
-                      <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                        {row.totalTrades} trades
-                      </span>
-                    )}
-                    <span className="text-[10px] text-neutral-500 tabular-nums mt-0.5">
-                      {metric === "pnl"
-                        ? `${row.totalTrades}t · ${Math.round(row.winRate)}%`
-                        : `${formatCurrency(row.totalPnl)}`}
-                    </span>
-                  </div>
-                </td>
-              </tr>
+              </div>
             ))}
+          </div>
 
-            {/* Bottom Row: Session Column Totals */}
-            <tr className="border-t border-white/[0.035] bg-white/[0.01]">
-              <td className="py-2.5 pr-2">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
-                  Total
-                </span>
-              </td>
-
-              {SESSIONS.map((s) => {
-                const total = sessionTotals[s.key];
-                return (
-                  <td key={s.key} className="py-1.5 px-1.5">
-                    <div className="rounded-xl border border-white/[0.04] bg-white/[0.02] p-2 flex flex-col items-center justify-center h-14">
-                      {metric === "pnl" && (
-                        <span
-                          className={cn(
-                            "text-xs font-semibold tabular-nums tracking-tight",
-                            total.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
-                          )}
-                        >
-                          {formatCurrency(total.pnl)}
-                        </span>
-                      )}
-                      {metric === "winRate" && (
-                        <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                          {Math.round(total.winRate)}%
-                        </span>
-                      )}
-                      {metric === "trades" && (
-                        <span className="text-xs font-semibold tabular-nums tracking-tight text-neutral-100">
-                          {total.trades} trades
-                        </span>
-                      )}
-                      <span className="text-[10px] text-neutral-500 tabular-nums mt-0.5">
-                        {metric === "pnl"
-                          ? `${total.trades}t · ${Math.round(total.winRate)}%`
-                          : `${formatCurrency(total.pnl)}`}
-                      </span>
-                    </div>
-                  </td>
-                );
-              })}
-
-              {/* Grand Total Bottom-Right */}
-              <td className="py-1.5 pl-2">
-                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] p-2 flex flex-col items-center justify-center h-14">
-                  <span className="text-xs font-bold tabular-nums tracking-tight text-emerald-400">
-                    {metric === "pnl"
-                      ? formatCurrency(grandTotal.pnl)
-                      : metric === "winRate"
-                      ? `${Math.round(grandTotal.winRate)}%`
-                      : `${grandTotal.trades} trades`}
-                  </span>
-                  <span className="text-[10px] text-emerald-400/70 tabular-nums mt-0.5 font-medium">
-                    {grandTotal.trades} trades · {Math.round(grandTotal.winRate)}% WR
-                  </span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          {/* Quick Consistency Stats */}
+          <div className="flex items-center gap-4 text-xs shrink-0 self-end sm:self-auto border-t sm:border-t-0 sm:border-l border-white/[0.04] pt-2 sm:pt-0 sm:pl-4">
+            <div>
+              <span className="text-[10px] text-neutral-500 uppercase block">Active Days</span>
+              <span className="font-semibold tabular-nums text-neutral-200">14 / 20</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-neutral-500 uppercase block">Win Streak</span>
+              <span className="font-semibold tabular-nums text-emerald-400">5 Days</span>
+            </div>
+            <div>
+              <span className="text-[10px] text-neutral-500 uppercase block">Avg Daily</span>
+              <span className="font-semibold tabular-nums text-neutral-200">+$285</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Alias for backwards compatibility
 export const SessionHeatmap = HourlyHeatmap;
