@@ -27,12 +27,12 @@ export function DailyPnlChart({ height = 180 }: { height?: number }) {
   }, []);
 
   return (
-    <div className="glass-card rounded-2xl p-5 border border-[var(--border-primary)] shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between h-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-1">
         <div>
-          <h2 className="text-base font-bold text-[var(--text-primary)]">Daily P&L</h2>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
+          <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">Daily P&L</h2>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
             Last 20 trading days performance
           </p>
         </div>
@@ -40,12 +40,12 @@ export function DailyPnlChart({ height = 180 }: { height?: number }) {
         {/* Legend */}
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span className="text-[var(--text-secondary)]">Profit</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span className="text-[11px] text-neutral-400">Profit</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
-            <span className="text-[var(--text-secondary)]">Loss</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+            <span className="text-[11px] text-neutral-400">Loss</span>
           </div>
         </div>
       </div>

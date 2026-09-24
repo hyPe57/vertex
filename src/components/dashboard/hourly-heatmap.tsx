@@ -43,25 +43,25 @@ export function HourlyHeatmap() {
   }, []);
 
   return (
-    <div className="glass-card rounded-2xl p-5 border border-[var(--border-primary)] shadow-sm flex flex-col justify-between">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between">
       {/* Header */}
       <div className="flex items-center justify-between pb-1">
         <div>
-          <h2 className="text-base font-bold text-[var(--text-primary)]">
+          <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">
             Hourly P&L Heatmap
           </h2>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
+          <p className="text-[11px] text-neutral-400 mt-0.5">
             Net performance distribution by entry hour (24H UTC)
           </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/80" />
-            <span className="text-[var(--text-secondary)]">Profit</span>
+            <span className="w-2 h-2 rounded-sm bg-emerald-400/80" />
+            <span className="text-[11px] text-neutral-400">Profit</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-red-500/80" />
-            <span className="text-[var(--text-secondary)]">Loss</span>
+            <span className="w-2 h-2 rounded-sm bg-rose-400/80" />
+            <span className="text-[11px] text-neutral-400">Loss</span>
           </div>
         </div>
       </div>

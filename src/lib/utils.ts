@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatCurrency(value: number, showSign = true): string {
-  const prefix = showSign && value > 0 ? "+" : "";
+  const isNegative = value < 0;
+  const prefix = isNegative ? "-" : showSign && value > 0 ? "+" : "";
   return `${prefix}$${Math.abs(value).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,

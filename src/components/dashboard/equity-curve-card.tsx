@@ -20,22 +20,22 @@ export function EquityCurveCard({
   const pnlPct = (pnl / activePort.initialBalance) * 100;
 
   return (
-    <div className="glass-card rounded-2xl p-5 border border-[var(--border-primary)] shadow-sm flex flex-col justify-between h-full">
+    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col justify-between h-full">
       {/* Header */}
       <div className="flex items-start justify-between pb-1">
         <div>
-          <h2 className="text-base font-bold text-[var(--text-primary)]">Equity Curve</h2>
-          <p className="text-[11px] text-[var(--text-tertiary)]">
+          <h2 className="text-sm font-semibold text-neutral-100 tracking-tight">Equity Curve</h2>
+          <p className="text-[11px] text-neutral-400 mt-0.5">
             Cumulative P&L growth over time
           </p>
         </div>
 
         {/* Current Total Balance on Top-Right */}
         <div className="text-right">
-          <span className="text-xl sm:text-2xl font-bold font-mono text-[var(--text-primary)]">
+          <span className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-neutral-100">
             {formatCurrency(activePort.currentBalance, false)}
           </span>
-          <p className="text-[10px] font-mono font-semibold text-profit">
+          <p className="text-[11px] font-medium tabular-nums text-emerald-400">
             +{display === "usd" ? formatCurrency(pnl) : formatPercent(pnlPct)}
           </p>
         </div>
@@ -47,7 +47,7 @@ export function EquityCurveCard({
       </div>
 
       {/* Footer Mode Toggles: Cumulative vs Break-even */}
-      <div className="flex items-center gap-4 pt-2.5 border-t border-[var(--border-primary)]/40 text-xs">
+      <div className="flex items-center gap-4 pt-2.5 border-t border-white/[0.035] text-xs">
         <label className="flex items-center gap-2 cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
           <input
             type="radio"
