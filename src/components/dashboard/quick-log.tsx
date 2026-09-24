@@ -15,7 +15,6 @@ import {
   Check,
   Maximize2,
   Image as ImageIcon,
-  Globe,
 } from "lucide-react";
 
 interface AttachedImage {
@@ -34,11 +33,11 @@ function getDefaultSession(): Session {
   return "asian";
 }
 
-const SESSION_OPTIONS: { id: Session; label: string; flag: string }[] = [
-  { id: "asian", label: "Asian", flag: "🌏" },
-  { id: "london", label: "London", flag: "🇬🇧" },
-  { id: "new_york", label: "New York", flag: "🇺🇸" },
-  { id: "overlap", label: "Overlap", flag: "⚡" },
+const SESSION_OPTIONS: { id: Session; label: string }[] = [
+  { id: "asian", label: "Asian" },
+  { id: "london", label: "London" },
+  { id: "new_york", label: "New York" },
+  { id: "overlap", label: "Overlap" },
 ];
 
 const emotionColors = [
@@ -343,18 +342,10 @@ export function QuickLog() {
 
         {/* 3. Trading Session */}
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
-              Session
-            </label>
-            <span className="text-[10px] text-neutral-400 font-medium">
-              {session === "asian" && "🌏 Tokyo / Sydney"}
-              {session === "london" && "🇬🇧 London"}
-              {session === "new_york" && "🇺🇸 New York"}
-              {session === "overlap" && "⚡ London + NY Overlap"}
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-1 p-0.5 rounded-xl bg-white/[0.025] border border-white/[0.05]">
+          <label className="block text-[10px] font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+            Session
+          </label>
+          <div className="flex h-8 rounded-xl p-0.5 bg-white/[0.025] border border-white/[0.05]">
             {SESSION_OPTIONS.map((item) => {
               const isSelected = session === item.id;
               return (
@@ -363,14 +354,13 @@ export function QuickLog() {
                   type="button"
                   onClick={() => setSession(item.id)}
                   className={cn(
-                    "h-7 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1",
+                    "flex-1 rounded-lg text-xs font-semibold transition-all cursor-pointer text-center",
                     isSelected
-                      ? "bg-white/[0.1] text-white shadow-xs border border-white/[0.08]"
-                      : "text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.02]"
+                      ? "bg-white/[0.08] text-white border border-white/[0.07] shadow-xs"
+                      : "text-neutral-400 hover:text-neutral-200"
                   )}
                 >
-                  <span className="text-[11px]">{item.flag}</span>
-                  <span className="text-[11px]">{item.label}</span>
+                  {item.label}
                 </button>
               );
             })}
