@@ -25,12 +25,13 @@ export function QuickLog() {
   const [emotion, setEmotion] = useState<number | null>(4);
   const [notes, setNotes] = useState("");
 
-  // Tag management matching History edit drawer
+  // Tag management - Clean minimal unified cloud
   const [selectedTags, setSelectedTags] = useState<string[]>(["Breakout"]);
   const [availableTags, setAvailableTags] = useState<string[]>(
     mockTags.map((t) => t.name)
   );
   const [newTagInput, setNewTagInput] = useState("");
+  const [isAddingTag, setIsAddingTag] = useState(false);
 
   const rr =
     entry && sl && tp && direction
@@ -50,7 +51,10 @@ export function QuickLog() {
 
   const handleAddTag = () => {
     const trimmed = newTagInput.trim().replace(/^#/, "");
-    if (!trimmed) return;
+    if (!trimmed) {
+      setIsAddingTag(false);
+      return;
+    }
     if (!availableTags.includes(trimmed)) {
       setAvailableTags((prev) => [...prev, trimmed]);
     }
@@ -58,6 +62,7 @@ export function QuickLog() {
       setSelectedTags((prev) => [...prev, trimmed]);
     }
     setNewTagInput("");
+    setIsAddingTag(false);
   };
 
   const handleRemoveTag = (tagName: string) => {
@@ -265,9 +270,9 @@ export function QuickLog() {
           </div>
         </div>
 
-        {/* 6. TAGS */}
+        {/* 6. TAGS - Modern Minimal Unified Cloud */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
               <TagIcon size={11} className="text-neutral-400" />
               <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
@@ -275,61 +280,23 @@ export function QuickLog() {
               </label>
             </div>
             {selectedTags.length > 0 && (
-              <span className="text-[10px] text-neutral-500 tabular-nums">
-                {selectedTags.length} selected
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-neutral-500 tabular-nums">
+                  {selectedTags.length} selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedTags([])}
+                  className="text-[10px] text-neutral-500 hover:text-rose-400 transition-colors cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
             )}
           </div>
 
-          {/* Active Tags with Delete 'X' */}
-          {selectedTags.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {selectedTags.map((tag) => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-white/[0.04] text-neutral-200 border border-white/[0.08]"
-                >
-                  #{tag}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="hover:text-rose-400 text-neutral-400 p-0.5 transition-colors cursor-pointer"
-                  >
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-
-          {/* Add New Tag Input matching History Drawer */}
-          <div className="flex items-center gap-1.5 mb-2">
-            <input
-              type="text"
-              value={newTagInput}
-              onChange={(e) => setNewTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleAddTag();
-                }
-              }}
-              placeholder="Add tag and press Enter..."
-              className="flex-1 h-7.5 bg-white/[0.025] border border-white/[0.05] hover:border-white/[0.08] focus:border-white/20 rounded-xl px-2.5 text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none transition-colors"
-            />
-            <button
-              type="button"
-              onClick={handleAddTag}
-              disabled={!newTagInput.trim()}
-              className="h-7.5 px-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-neutral-200 border border-white/[0.08] text-xs font-semibold flex items-center gap-1 disabled:opacity-30 transition-all cursor-pointer disabled:cursor-not-allowed"
-            >
-              <Plus size={11} />
-              <span>Add</span>
-            </button>
-          </div>
-
-          {/* Tag Quick Suggestions */}
-          <div className="flex flex-wrap gap-1">
+          {/* Unified Fluid Tag Pills + Inline Add */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {availableTags.map((tagName) => {
               const isSelected = selectedTags.includes(tagName);
               return (
@@ -338,16 +305,64 @@ export function QuickLog() {
                   type="button"
                   onClick={() => toggleTag(tagName)}
                   className={cn(
-                    "px-2 py-0.5 rounded-md text-[10px] font-medium transition-all duration-150 border cursor-pointer",
+                    "group inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-150 border cursor-pointer select-none",
                     isSelected
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-semibold"
-                      : "border-white/[0.035] bg-white/[0.015] text-neutral-400 hover:border-white/[0.08] hover:text-neutral-200"
+                      ? "border-emerald-500/35 bg-emerald-500/15 text-emerald-300 font-semibold shadow-xs"
+                      : "border-white/[0.04] bg-white/[0.02] text-neutral-400 hover:border-white/[0.08] hover:text-neutral-200 hover:bg-white/[0.035]"
                   )}
                 >
-                  #{tagName}
+                  {isSelected && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  )}
+                  <span>#{tagName}</span>
+                  {isSelected && (
+                    <span className="text-emerald-400/60 group-hover:text-emerald-300 ml-0.5 text-[10px]">
+                      ✕
+                    </span>
+                  )}
                 </button>
               );
             })}
+
+            {/* Inline Add Tag Pill */}
+            {isAddingTag ? (
+              <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-white/20 bg-white/[0.04]">
+                <span className="text-neutral-500 text-[11px]">#</span>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newTagInput}
+                  onChange={(e) => setNewTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddTag();
+                    } else if (e.key === "Escape") {
+                      setIsAddingTag(false);
+                      setNewTagInput("");
+                    }
+                  }}
+                  onBlur={() => {
+                    if (newTagInput.trim()) {
+                      handleAddTag();
+                    } else {
+                      setIsAddingTag(false);
+                    }
+                  }}
+                  placeholder="tag name..."
+                  className="w-20 bg-transparent text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsAddingTag(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-neutral-400 hover:text-neutral-200 border border-dashed border-white/[0.08] hover:border-white/[0.2] bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer"
+              >
+                <Plus size={11} />
+                <span>Tag</span>
+              </button>
+            )}
           </div>
         </div>
 
