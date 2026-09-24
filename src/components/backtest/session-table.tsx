@@ -18,7 +18,7 @@ export function SessionTable() {
   const [tab, setTab] = useState<"trades" | "sessions">("trades");
 
   return (
-    <div className="rounded-2xl border border-white/[0.04] bg-[#0c0d14]/80 backdrop-blur-md overflow-hidden flex flex-col h-full shadow-xs">
+    <div className="bg-[#0c0d14] overflow-hidden flex flex-col h-full">
       {/* Header Tabs & Actions */}
       <div className="px-4 py-3 flex items-center justify-between border-b border-white/[0.04]">
         <div className="flex items-center gap-2">

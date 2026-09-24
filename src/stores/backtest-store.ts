@@ -51,22 +51,63 @@ export interface BacktestSessionRecord {
   date: string;
 }
 
-// Generate realistic candlestick data with strictly ascending timestamps
-function generateDataset(asset: string, count = 300): BacktestCandle[] {
+export function getTimeframeInterval(tf: string): number {
+  switch (tf) {
+    case "1m":
+      return 60;
+    case "5m":
+      return 300;
+    case "15m":
+      return 900;
+    case "1H":
+      return 3600;
+    case "4H":
+      return 14400;
+    case "1D":
+      return 86400;
+    default:
+      return 900;
+  }
+}
+
+export function getTimeframeVolatility(tf: string): { scale: number; wavePeriod: number } {
+  switch (tf) {
+    case "1m":
+      return { scale: 0.35, wavePeriod: 8 };
+    case "5m":
+      return { scale: 0.65, wavePeriod: 12 };
+    case "15m":
+      return { scale: 1.0, wavePeriod: 18 };
+    case "1H":
+      return { scale: 2.2, wavePeriod: 26 };
+    case "4H":
+      return { scale: 4.5, wavePeriod: 36 };
+    case "1D":
+      return { scale: 8.5, wavePeriod: 48 };
+    default:
+      return { scale: 1.0, wavePeriod: 18 };
+  }
+}
+
+// Generate realistic candlestick data with strictly ascending timestamps tailored to timeframe
+function generateDataset(asset: string, timeframe = "15m", count = 300): BacktestCandle[] {
   let basePrice = 2350.0; // XAUUSD
-  let volatility = 2.2;
-  const intervalSeconds = 900; // 15m
+  let baseVolatility = 2.2;
 
   if (asset === "EURUSD") {
     basePrice = 1.085;
-    volatility = 0.0009;
+    baseVolatility = 0.0009;
   } else if (asset === "BTCUSD") {
     basePrice = 64200.0;
-    volatility = 220.0;
+    baseVolatility = 220.0;
   } else if (asset === "NAS100") {
     basePrice = 18250.0;
-    volatility = 28.0;
+    baseVolatility = 28.0;
   }
+
+  const intervalSeconds = getTimeframeInterval(timeframe);
+  const { scale, wavePeriod } = getTimeframeVolatility(timeframe);
+  const volatility = baseVolatility * scale;
 
   const candles: BacktestCandle[] = [];
   let currentClose = basePrice;
@@ -75,14 +116,16 @@ function generateDataset(asset: string, count = 300): BacktestCandle[] {
 
   for (let i = 0; i < count; i++) {
     const time = startTime + i * intervalSeconds;
-    // Market cycle simulation: trend + pullbacks
-    const trend = Math.sin(i / 15) * (volatility * 0.4);
+    // Market cycle simulation: trend + wave oscillations + noise
+    const trend =
+      Math.sin(i / wavePeriod) * (volatility * 0.5) +
+      Math.cos(i / (wavePeriod * 0.6)) * (volatility * 0.25);
     const noise = (Math.random() - 0.49) * volatility;
     const change = trend + noise;
     const open = currentClose;
-    const close = Math.max(open + change, basePrice * 0.4);
-    const high = Math.max(open, close) + Math.random() * volatility * 0.6;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.6;
+    const close = Math.max(open + change, basePrice * 0.3);
+    const high = Math.max(open, close) + Math.random() * volatility * 0.55;
+    const low = Math.min(open, close) - Math.random() * volatility * 0.55;
     const volume = Math.floor(Math.random() * 800) + 150;
 
     const decimals = asset === "EURUSD" ? 4 : 2;
@@ -175,7 +218,7 @@ interface BacktestState {
 
 export const useBacktestStore = create<BacktestState>((set, get) => {
   const initialAsset = "XAUUSD";
-  const initialCandles = generateDataset(initialAsset, 300);
+  const initialCandles = generateDataset(initialAsset, "15m", 300);
   const startReveal = 100;
 
   return {
@@ -231,11 +274,12 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
     ],
 
     setAsset: (newAsset) => {
-      const newCandles = generateDataset(newAsset, 300);
+      const state = get();
+      const newCandles = generateDataset(newAsset, state.timeframe, 300);
       set({
         asset: newAsset,
         candles: newCandles,
-        visibleIndex: 100,
+        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
         customSlPrice: "",
@@ -243,7 +287,17 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       });
     },
 
-    setTimeframe: (tf) => set({ timeframe: tf }),
+    setTimeframe: (tf) => {
+      const state = get();
+      const newCandles = generateDataset(state.asset, tf, 300);
+      set({
+        timeframe: tf,
+        candles: newCandles,
+        visibleIndex: 120,
+        activePosition: null,
+        isPlaying: false,
+      });
+    },
     setLotSize: (lot) => set({ lotSize: lot }),
     setSpreadPips: (spreadPips) => set({ spreadPips }),
     setTpMode: (tpMode) => set({ tpMode }),
@@ -266,8 +320,12 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       // If approaching dataset end, dynamically generate more continuous bars
       if (nextIndex >= candles.length) {
         const last = candles[candles.length - 1];
-        const volatility =
+        const baseVolatility =
           state.asset === "EURUSD" ? 0.0009 : state.asset === "BTCUSD" ? 220 : 2.2;
+        const { scale } = getTimeframeVolatility(state.timeframe);
+        const volatility = baseVolatility * scale;
+        const intervalSeconds = getTimeframeInterval(state.timeframe);
+
         const change = (Math.random() - 0.49) * volatility;
         const open = last.close;
         const close = open + change;
@@ -276,7 +334,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         const decimals = state.asset === "EURUSD" ? 4 : 2;
 
         candles.push({
-          time: last.time + 900,
+          time: last.time + intervalSeconds,
           open: Number(open.toFixed(decimals)),
           high: Number(high.toFixed(decimals)),
           low: Number(low.toFixed(decimals)),
@@ -375,10 +433,10 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     resetSimulation: () => {
       const state = get();
-      const freshCandles = generateDataset(state.asset, 300);
+      const freshCandles = generateDataset(state.asset, state.timeframe, 300);
       set({
         candles: freshCandles,
-        visibleIndex: 100,
+        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
         balance: state.startingBalance,

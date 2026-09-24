@@ -49,6 +49,7 @@ export function CandlestickChart() {
   // Keep track of the last rendered visibleIndex to optimize incremental updates
   const lastIndexRef = useRef<number>(-1);
   const lastAssetRef = useRef<string>(asset);
+  const lastTimeframeRef = useRef<string>(timeframe);
 
   // Current active / latest candle
   const latestCandle = candles[visibleIndex] || candles[candles.length - 1];
@@ -198,8 +199,8 @@ export function CandlestickChart() {
     const chart = chartRef.current;
     if (!series || !chart) return;
 
-    // Asset changed: reformat precision and reload all candles
-    if (lastAssetRef.current !== asset) {
+    // Asset or Timeframe changed: reformat precision and reload all candles
+    if (lastAssetRef.current !== asset || lastTimeframeRef.current !== timeframe) {
       series.applyOptions({
         priceFormat: {
           type: "price",
@@ -219,6 +220,7 @@ export function CandlestickChart() {
       chart.timeScale().fitContent();
       lastIndexRef.current = visibleIndex;
       lastAssetRef.current = asset;
+      lastTimeframeRef.current = timeframe;
       return;
     }
 
@@ -243,12 +245,12 @@ export function CandlestickChart() {
         close: c.close,
       }));
       series.setData(slice);
-      if (visibleIndex <= 100) {
+      if (visibleIndex <= 120) {
         chart.timeScale().fitContent();
       }
       lastIndexRef.current = visibleIndex;
     }
-  }, [candles, visibleIndex, asset, decimals]);
+  }, [candles, visibleIndex, asset, timeframe, decimals]);
 
   // 3. Manage Entry, TP, and SL Price Lines
   useEffect(() => {
@@ -358,10 +360,8 @@ export function CandlestickChart() {
   return (
     <div
       className={cn(
-        "relative w-full bg-[#090a0f] border border-white/[0.06] overflow-hidden flex flex-col justify-between select-none transition-all shadow-xl",
-        isFullscreen
-          ? "fixed inset-0 z-50 rounded-none h-screen w-screen"
-          : "rounded-2xl h-full min-h-[460px]"
+        "relative w-full h-full bg-[#090a0f] overflow-hidden flex flex-col justify-between select-none",
+        isFullscreen && "fixed inset-0 z-50 rounded-none h-screen w-screen"
       )}
     >
       {/* ─── Top Bar: Symbol, Live OHLC, and TradingView Controls ─── */}
