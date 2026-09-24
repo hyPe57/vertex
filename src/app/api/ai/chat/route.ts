@@ -6,10 +6,8 @@ interface ChatMessage {
 }
 
 interface RequestBody {
-  provider: "openai" | "gemini" | "deepseek" | "claude" | "openrouter" | "custom";
+  provider: "openai" | "gemini" | "deepseek" | "claude" | "openrouter";
   apiKey: string;
-  model: string;
-  baseUrl?: string;
   messages: ChatMessage[];
   tradingContext?: Record<string, unknown>;
 }
@@ -17,16 +15,28 @@ interface RequestBody {
 export async function POST(req: NextRequest) {
   try {
     const body: RequestBody = await req.json();
-    const { provider, apiKey, model, baseUrl, messages, tradingContext } = body;
+    const { provider, apiKey, messages, tradingContext } = body;
 
-    if (!apiKey && provider !== "custom") {
+    const trimmedKey = (apiKey || "").trim();
+    if (!trimmedKey) {
       return NextResponse.json(
         { error: "API Key is required. กรุณากรอก API Key ก่อนเริ่มใช้งาน" },
         { status: 400 }
       );
     }
 
-    // Build system message with trading context if available
+    // Default optimal model per provider automatically (No user model selection needed)
+    const MODEL_MAP: Record<string, string> = {
+      openai: "gpt-4o-mini",
+      gemini: "gemini-2.0-flash",
+      deepseek: "deepseek-chat",
+      claude: "claude-3-5-sonnet-20241022",
+      openrouter: "anthropic/claude-3.5-sonnet",
+    };
+
+    const targetModel = MODEL_MAP[provider] || "gpt-4o-mini";
+
+    // System prompt with trading context
     let systemPrompt = `You are Vertex AI, an elite Trading Coach and Quantitative Journal Analyst.
 You help traders identify behavioral patterns, optimize Risk-to-Reward (R:R), control emotional biases (FOMO, Revenge Trading, Early Exit), and improve trade execution.
 Be direct, analytical, professional, and practical. Use bullet points and clear numbers when discussing statistics. Answer in Thai or English based on the language of the user's inquiry.`;
@@ -37,18 +47,10 @@ ${JSON.stringify(tradingContext, null, 2)}
 Use this actual journal data to answer specific questions about their performance, win rate, emotions, and trade history accurately.`;
     }
 
-    // Prepare message list with system prompt
-    const fullMessages: ChatMessage[] = [
-      { role: "system", content: systemPrompt },
-      ...messages,
-    ];
-
     // ── 1. Google Gemini ──────────────────────────────────────
     if (provider === "gemini") {
-      const geminiModel = model || "gemini-2.0-flash";
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${trimmedKey}`;
 
-      // Convert messages for Gemini
       const geminiContents = messages.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
@@ -80,7 +82,6 @@ Use this actual journal data to answer specific questions about their performanc
 
     // ── 2. Anthropic Claude ──────────────────────────────────
     if (provider === "claude") {
-      const claudeModel = model || "claude-3-5-sonnet-20241022";
       const claudeMessages = messages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
@@ -89,12 +90,12 @@ Use this actual journal data to answer specific questions about their performanc
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
         headers: {
-          "x-api-key": apiKey,
+          "x-api-key": trimmedKey,
           "anthropic-version": "2023-06-01",
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: claudeModel,
+          model: targetModel,
           max_tokens: 2048,
           system: systemPrompt,
           messages: claudeMessages,
@@ -110,35 +111,25 @@ Use this actual journal data to answer specific questions about their performanc
       return NextResponse.json({ reply });
     }
 
-    // ── 3. OpenAI / DeepSeek / OpenRouter / Custom (OpenAI Compatible) ─
-    let defaultEndpoint = "https://api.openai.com/v1/chat/completions";
-    let defaultModel = "gpt-4o-mini";
+    // ── 3. OpenAI / DeepSeek / OpenRouter ────────────────────
+    let targetEndpoint = "https://api.openai.com/v1/chat/completions";
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${trimmedKey}`,
     };
 
     if (provider === "deepseek") {
-      defaultEndpoint = "https://api.deepseek.com/chat/completions";
-      defaultModel = "deepseek-chat";
+      targetEndpoint = "https://api.deepseek.com/chat/completions";
     } else if (provider === "openrouter") {
-      defaultEndpoint = "https://openrouter.ai/api/v1/chat/completions";
-      defaultModel = "anthropic/claude-3.5-sonnet";
+      targetEndpoint = "https://openrouter.ai/api/v1/chat/completions";
       headers["HTTP-Referer"] = "https://vertex-trading.local";
       headers["X-Title"] = "Vertex Trading Journal";
-    } else if (provider === "custom") {
-      const cleanBase = (baseUrl || "http://localhost:11434/v1").replace(/\/$/, "");
-      defaultEndpoint = cleanBase.endsWith("/chat/completions")
-        ? cleanBase
-        : `${cleanBase}/chat/completions`;
-      defaultModel = model || "llama3";
-      if (!apiKey) {
-        delete headers.Authorization; // Local Ollama does not need auth
-      }
     }
 
-    const targetEndpoint = provider === "custom" && baseUrl ? defaultEndpoint : (baseUrl || defaultEndpoint);
-    const targetModel = model || defaultModel;
+    const fullMessages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
 
     const res = await fetch(targetEndpoint, {
       method: "POST",
@@ -162,7 +153,7 @@ Use this actual journal data to answer specific questions about their performanc
     const error = err as Error;
     console.error("[AI Chat API Error]:", error);
     return NextResponse.json(
-      { error: error.message || "Failed to process AI request. Please check your API Key and Model." },
+      { error: error.message || "Failed to process AI request. Please check your API Key." },
       { status: 500 }
     );
   }
