@@ -1,10 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn, calculateRR, getEmotionLabel, getEmotionColor } from "@/lib/utils";
 import { mockTags } from "@/lib/mock-data";
-import { UploadCloud, Zap, X, Plus, Tag as TagIcon } from "lucide-react";
+import { useTradeStore } from "@/stores";
+import type { Trade } from "@/types";
+import {
+  UploadCloud,
+  Zap,
+  X,
+  Plus,
+  Tag as TagIcon,
+  Check,
+  Maximize2,
+  Image as ImageIcon,
+} from "lucide-react";
+
+interface AttachedImage {
+  id: string;
+  dataUrl: string;
+  name: string;
+  size: string;
+}
 
 const emotionColors = [
   "bg-rose-500/80",
@@ -25,6 +43,13 @@ export function QuickLog() {
   const [emotion, setEmotion] = useState<number | null>(4);
   const [notes, setNotes] = useState("");
 
+  // Real Image Attachments State
+  const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewModalImg, setPreviewModalImg] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Tag management - Clean minimal unified cloud
   const [selectedTags, setSelectedTags] = useState<string[]>(["Breakout"]);
   const [availableTags, setAvailableTags] = useState<string[]>(
@@ -32,6 +57,59 @@ export function QuickLog() {
   );
   const [newTagInput, setNewTagInput] = useState("");
   const [isAddingTag, setIsAddingTag] = useState(false);
+
+  // Process image files (File picker, Drag & Drop, Paste)
+  const processFiles = (files: FileList | File[]) => {
+    const fileArr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (fileArr.length === 0) return;
+
+    fileArr.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        if (!dataUrl) return;
+
+        const sizeKB = file.size / 1024;
+        const formattedSize =
+          sizeKB > 1024
+            ? `${(sizeKB / 1024).toFixed(1)} MB`
+            : `${Math.round(sizeKB)} KB`;
+
+        setAttachedImages((prev) => [
+          ...prev,
+          {
+            id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            dataUrl,
+            name: file.name || "screenshot.png",
+            size: formattedSize,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Clipboard Paste Support (Ctrl+V / Cmd+V anywhere on window/component)
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const imageFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith("image/")) {
+          const file = items[i].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        processFiles(imageFiles);
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, []);
 
   const rr =
     entry && sl && tp && direction
@@ -65,8 +143,65 @@ export function QuickLog() {
     setIsAddingTag(false);
   };
 
-  const handleRemoveTag = (tagName: string) => {
-    setSelectedTags((prev) => prev.filter((t) => t !== tagName));
+  // Submit Trade Log with real attachments
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    const entryNum = parseFloat(entry) || 2650.5;
+    const exitNum = parseFloat(exit) || (direction === "long" ? entryNum + 15 : entryNum - 15);
+    const slNum = parseFloat(sl) || (direction === "long" ? entryNum - 10 : entryNum + 10);
+    const tpNum = parseFloat(tp) || (direction === "long" ? entryNum + 20 : entryNum - 20);
+    const lots = parseFloat(lotSize) || 0.5;
+
+    const diff = direction === "long" ? exitNum - entryNum : entryNum - exitNum;
+    const calculatedPnl = Math.round(diff * lots * 100);
+
+    const newTrade: Trade = {
+      id: `trade-${Date.now()}`,
+      portId: "port-1",
+      asset: (asset || "XAUUSD").toUpperCase(),
+      direction,
+      lotSize: lots,
+      entryPrice: entryNum,
+      exitPrice: exitNum,
+      stopLoss: slNum,
+      takeProfit: tpNum,
+      riskReward: rr ? parseFloat(rr.toString()) : 2.0,
+      pnl: calculatedPnl,
+      pnlPercent: parseFloat(((calculatedPnl / 10000) * 100).toFixed(2)),
+      commission: -3.5,
+      swap: 0,
+      emotionLevel: emotion || 4,
+      notes: notes || "Trade logged via QuickLog",
+      session: "london",
+      status: "closed",
+      isBacktest: false,
+      tags: selectedTags.length > 0 ? selectedTags : ["Manual"],
+      images: attachedImages.map((img) => ({
+        id: img.id,
+        imageUrl: img.dataUrl,
+        thumbnailUrl: img.dataUrl,
+        caption: img.name,
+      })),
+      openTime: new Date(Date.now() - 3600000).toISOString(),
+      closeTime: new Date().toISOString(),
+    };
+
+    useTradeStore.getState().addTrade(newTrade);
+
+    // Show visual confirmation
+    setSubmitSuccess(true);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      setAsset("");
+      setEntry("");
+      setExit("");
+      setSl("");
+      setTp("");
+      setLotSize("");
+      setNotes("");
+      setAttachedImages([]);
+    }, 1500);
   };
 
   return (
@@ -76,7 +211,7 @@ export function QuickLog() {
       transition={{ duration: 0.35, delay: 0.1 }}
       className="w-full"
     >
-      <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col gap-4">
+      <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] shadow-sm flex flex-col gap-4 relative">
         {/* Header */}
         <div className="flex items-center justify-between pb-1">
           <div className="flex items-center gap-2.5">
@@ -380,22 +515,169 @@ export function QuickLog() {
           />
         </div>
 
-        {/* Screenshot Upload Dropzone */}
+        {/* 8. Real Screenshot Upload Dropzone & Thumbnails */}
         <div>
-          <div className="border border-dashed border-white/[0.06] hover:border-white/20 rounded-xl py-2.5 px-3 flex items-center justify-center gap-2 text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer bg-white/[0.015]">
-            <UploadCloud size={15} className="opacity-70" />
-            <span className="text-[11px]">Drop chart screenshot here</span>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="text-[10px] font-semibold uppercase tracking-wider text-neutral-400">
+              Chart Screenshots
+            </label>
+            {attachedImages.length > 0 && (
+              <span className="text-[10px] text-emerald-400 font-medium tabular-nums">
+                {attachedImages.length} attached
+              </span>
+            )}
           </div>
+
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={(e) => {
+              if (e.target.files) processFiles(e.target.files);
+              e.target.value = "";
+            }}
+            className="hidden"
+          />
+
+          {/* Interactive Dropzone */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              if (e.dataTransfer.files) processFiles(e.dataTransfer.files);
+            }}
+            className={cn(
+              "border border-dashed rounded-xl py-3 px-3 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer select-none",
+              isDragging
+                ? "border-emerald-400 bg-emerald-500/10 text-emerald-300"
+                : "border-white/[0.07] hover:border-white/20 bg-white/[0.015] hover:bg-white/[0.025] text-neutral-400 hover:text-neutral-200"
+            )}
+          >
+            <div className="flex items-center gap-2 text-xs font-medium">
+              <UploadCloud size={16} className={isDragging ? "text-emerald-400" : "opacity-70"} />
+              <span>
+                Drop chart image or <span className="text-emerald-400 underline underline-offset-2">browse</span>
+              </span>
+            </div>
+            <span className="text-[10px] text-neutral-500">
+              Supports clipboard paste <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-neutral-400 font-mono text-[9px]">Ctrl+V</kbd>
+            </span>
+          </div>
+
+          {/* Real Attached Image Thumbnails */}
+          {attachedImages.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {attachedImages.map((img) => (
+                <div
+                  key={img.id}
+                  className="relative group rounded-xl overflow-hidden border border-white/[0.08] bg-black/40 aspect-video flex items-center justify-center"
+                >
+                  <img
+                    src={img.dataUrl}
+                    alt={img.name}
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-200"
+                  />
+                  {/* Hover Control Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-medium text-white/90 bg-black/60 px-1.5 py-0.5 rounded backdrop-blur-xs truncate max-w-[90px]">
+                        {img.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAttachedImages((prev) => prev.filter((i) => i.id !== img.id));
+                        }}
+                        className="w-5 h-5 rounded-full bg-rose-500/80 hover:bg-rose-500 text-white flex items-center justify-center transition-colors shadow-xs cursor-pointer"
+                      >
+                        <X size={10} />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewModalImg(img.dataUrl);
+                      }}
+                      className="self-center flex items-center gap-1 text-[10px] font-semibold text-white/95 bg-white/20 hover:bg-white/30 backdrop-blur-xs px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Maximize2 size={10} />
+                      <span>Preview</span>
+                    </button>
+                  </div>
+
+                  {/* Size Badge (Visible when not hovered) */}
+                  <span className="absolute bottom-1 right-1 text-[9px] font-medium text-white/80 bg-black/70 px-1.5 py-0.2 rounded group-hover:hidden">
+                    {img.size}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Submit */}
+        {/* Submit Button with Success State */}
         <button
           type="button"
-          className="w-full h-9 rounded-xl bg-white text-black font-semibold text-xs hover:bg-neutral-200 active:scale-[0.99] transition-all shadow-sm cursor-pointer"
+          onClick={() => handleSubmit()}
+          disabled={submitSuccess}
+          className={cn(
+            "w-full h-9 rounded-xl font-semibold text-xs transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer",
+            submitSuccess
+              ? "bg-emerald-500 text-white"
+              : "bg-white text-black hover:bg-neutral-200 active:scale-[0.99]"
+          )}
         >
-          Submit Trade Log
+          {submitSuccess ? (
+            <>
+              <Check size={14} />
+              <span>Trade Logged with {attachedImages.length} Image{attachedImages.length === 1 ? "" : "s"}!</span>
+            </>
+          ) : (
+            <span>Submit Trade Log</span>
+          )}
         </button>
+
+        {/* Fullscreen Lightbox Modal for Chart Preview */}
+        {previewModalImg && (
+          <div
+            onClick={() => setPreviewModalImg(null)}
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 shadow-2xl bg-[#09090b]"
+            >
+              <img
+                src={previewModalImg}
+                alt="Full Chart Preview"
+                className="w-full h-full object-contain max-h-[85vh] rounded-2xl"
+              />
+              <button
+                type="button"
+                onClick={() => setPreviewModalImg(null)}
+                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center transition-colors border border-white/20 cursor-pointer shadow-md"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
 }
+

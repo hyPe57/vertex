@@ -63,20 +63,29 @@ export function ImageExpand({ trade, onClose }: ImageExpandProps) {
           className="relative w-full max-w-5xl max-h-[85vh] bg-[var(--bg-primary)] rounded-2xl shadow-2xl border border-[var(--border-primary)] overflow-hidden flex flex-col lg:flex-row z-10"
         >
           {/* Image Section */}
-          <div className="flex-1 relative min-h-[40vh] lg:min-h-0 bg-[var(--bg-secondary)] overflow-hidden group">
-            <div className="absolute inset-0" style={backgroundStyle} />
-            
-            <div className="absolute inset-0 flex items-center justify-center opacity-40 mix-blend-overlay">
-              <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-                <polyline 
-                  points="0,40 20,30 40,35 60,15 80,25 100,5" 
-                  fill="none" 
-                  stroke={isWin ? "#22c55e" : "#ef4444"} 
-                  strokeWidth="1.5"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-            </div>
+          <div className="flex-1 relative min-h-[40vh] lg:min-h-0 bg-black/70 overflow-hidden flex items-center justify-center group">
+            {trade.images && trade.images.length > 0 && trade.images[0].imageUrl ? (
+              <img
+                src={trade.images[0].imageUrl}
+                alt={trade.asset}
+                className="w-full h-full object-contain p-2 max-h-[80vh]"
+              />
+            ) : (
+              <>
+                <div className="absolute inset-0" style={backgroundStyle} />
+                <div className="absolute inset-0 flex items-center justify-center opacity-40 mix-blend-overlay">
+                  <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+                    <polyline 
+                      points="0,40 20,30 40,35 60,15 80,25 100,5" 
+                      fill="none" 
+                      stroke={isWin ? "#22c55e" : "#ef4444"} 
+                      strokeWidth="1.5"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                </div>
+              </>
+            )}
             
             <button
               onClick={onClose}

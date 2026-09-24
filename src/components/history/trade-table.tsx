@@ -12,7 +12,7 @@ import {
 import { Trade } from "@/types";
 import { formatPnL, cn, getEmotionColor, getEmotionLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui";
-import { MoreHorizontal, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown, Pencil, Trash2, Image as ImageIcon } from "lucide-react";
 
 interface TradeTableProps {
   data: Trade[];
@@ -54,7 +54,23 @@ export function TradeTable({ data, onEdit, currencyDisplay = "usd" }: TradeTable
     }),
     columnHelper.accessor("asset", {
       header: "Asset",
-      cell: (info) => <span className="font-semibold text-[var(--text-primary)]">{info.getValue()}</span>,
+      cell: (info) => {
+        const images = info.row.original.images;
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="font-semibold text-[var(--text-primary)]">{info.getValue()}</span>
+            {images && images.length > 0 && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[9px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded"
+                title={`${images.length} screenshot(s) attached`}
+              >
+                <ImageIcon size={9} />
+                <span>{images.length}</span>
+              </span>
+            )}
+          </div>
+        );
+      },
     }),
     columnHelper.accessor("direction", {
       header: "Dir",

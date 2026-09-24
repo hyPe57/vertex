@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { mockTrades, mockTags } from "@/lib/mock-data";
+import { useTradeStore } from "@/stores";
+import { mockTags } from "@/lib/mock-data";
 import { ImageGrid } from "@/components/gallery/image-grid";
 import { Select, Badge } from "@/components/ui";
 
@@ -10,9 +11,10 @@ export default function GalleryPage() {
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filterOutcome, setFilterOutcome] = useState<string>("all");
 
+  const trades = useTradeStore((state) => state.trades);
   const tradesWithImages = useMemo(() => {
-    return mockTrades.filter((trade) => trade.images && trade.images.length > 0);
-  }, []);
+    return trades.filter((trade) => trade.images && trade.images.length > 0);
+  }, [trades]);
 
   const filteredTrades = useMemo(() => {
     return tradesWithImages.filter((trade) => {

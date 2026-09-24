@@ -1,7 +1,7 @@
 import { Drawer, Badge } from "@/components/ui";
-import { mockTrades, mockDailyStats } from "@/lib/mock-data";
+import { mockDailyStats } from "@/lib/mock-data";
+import { useTradeStore, useCurrencyStore } from "@/stores";
 import { format, parseISO } from "date-fns";
-import { useCurrencyStore } from "@/stores";
 
 interface DayDrawerProps {
   dateString: string | null;
@@ -12,6 +12,7 @@ interface DayDrawerProps {
 export function DayDrawer({ dateString, isOpen, onClose }: DayDrawerProps) {
   const { display } = useCurrencyStore();
   const isPercent = display === "percent";
+  const trades = useTradeStore((state) => state.trades);
   
   if (!dateString) return <Drawer isOpen={isOpen} onClose={onClose} width="w-[30%] min-w-[400px]"><div/></Drawer>;
 
@@ -19,7 +20,7 @@ export function DayDrawer({ dateString, isOpen, onClose }: DayDrawerProps) {
   const formattedDate = format(date, "MMMM d, yyyy");
   
   const dailyStat = mockDailyStats.find(s => s.date === dateString);
-  const dayTrades = mockTrades.filter(t => t.openTime.startsWith(dateString));
+  const dayTrades = trades.filter(t => t.openTime.startsWith(dateString));
 
   const formatPnl = (pnl: number, percent: number) => {
     if (isPercent) return `${percent > 0 ? "+" : ""}${percent.toFixed(2)}%`;
@@ -87,7 +88,11 @@ export function DayDrawer({ dateString, isOpen, onClose }: DayDrawerProps) {
                     <div className="flex gap-2 mt-1">
                       {trade.images.map(img => (
                         <div key={img.id} className="h-12 w-20 bg-surface-100 dark:bg-surface-100 rounded-md overflow-hidden relative border border-[var(--border-primary)] flex items-center justify-center">
-                          <span className="text-[9px] font-medium text-[var(--text-tertiary)]">CHART</span>
+                          {img.imageUrl ? (
+                            <img src={img.imageUrl} alt={img.caption || "Chart"} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[9px] font-medium text-[var(--text-tertiary)]">CHART</span>
+                          )}
                         </div>
                       ))}
                     </div>

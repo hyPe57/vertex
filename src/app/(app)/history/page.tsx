@@ -3,13 +3,14 @@
 import React, { useState, useMemo } from "react";
 import { TradeTable } from "@/components/history/trade-table";
 import { EditDrawer } from "@/components/history/edit-drawer";
-import { mockTrades } from "@/lib/mock-data";
+import { useTradeStore } from "@/stores";
 import { Trade } from "@/types";
 import { Input, Select, Button } from "@/components/ui";
 import { Search, Filter } from "lucide-react";
 
 export default function HistoryPage() {
-  const [trades, setTrades] = useState<Trade[]>(mockTrades);
+  const trades = useTradeStore((state) => state.trades);
+  const updateTrade = useTradeStore((state) => state.updateTrade);
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null);
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,7 +39,7 @@ export default function HistoryPage() {
   };
 
   const handleSave = (updatedTrade: Trade) => {
-    setTrades(prev => prev.map(t => t.id === updatedTrade.id ? updatedTrade : t));
+    updateTrade(updatedTrade.id, updatedTrade);
   };
 
   return (

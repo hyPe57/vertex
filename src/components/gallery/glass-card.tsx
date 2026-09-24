@@ -35,23 +35,32 @@ export function GlassCard({ trade, onClick }: GlassCardProps) {
       className="relative w-full aspect-[16/10] rounded-xl overflow-hidden cursor-pointer group border border-[var(--border-primary)] shadow-sm hover:shadow-lg dark:shadow-black/40"
       onClick={onClick}
     >
-      <div 
-        className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
-        style={backgroundStyle}
-      />
-      
-      {/* Decorative chart element placeholder */}
-      <div className="absolute inset-0 flex items-center justify-center opacity-30 mix-blend-overlay">
-        <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
-          <polyline 
-            points="0,40 20,30 40,35 60,15 80,25 100,5" 
-            fill="none" 
-            stroke={isWin ? "#22c55e" : "#ef4444"} 
-            strokeWidth="2"
-            vectorEffect="non-scaling-stroke"
+      {trade.images && trade.images.length > 0 && trade.images[0].imageUrl ? (
+        <img
+          src={trade.images[0].imageUrl}
+          alt={trade.asset}
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+        />
+      ) : (
+        <>
+          <div 
+            className="absolute inset-0 transition-transform duration-500 group-hover:scale-105"
+            style={backgroundStyle}
           />
-        </svg>
-      </div>
+          {/* Decorative chart element placeholder */}
+          <div className="absolute inset-0 flex items-center justify-center opacity-30 mix-blend-overlay">
+            <svg viewBox="0 0 100 50" className="w-full h-full preserve-3d" preserveAspectRatio="none">
+              <polyline 
+                points="0,40 20,30 40,35 60,15 80,25 100,5" 
+                fill="none" 
+                stroke={isWin ? "#22c55e" : "#ef4444"} 
+                strokeWidth="2"
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
+        </>
+      )}
 
       {/* Glassmorphism Tag Overlay */}
       <div className="absolute bottom-2.5 right-2.5">

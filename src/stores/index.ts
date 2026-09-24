@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { Theme, CurrencyDisplay } from "@/types";
+import type { Theme, CurrencyDisplay, Trade } from "@/types";
+import { mockTrades } from "@/lib/mock-data";
 
 // ─── Theme Store ───
 
@@ -79,4 +80,29 @@ export const useDrawerStore = create<DrawerState>((set) => ({
   data: null,
   openDrawer: (content, data = {}) => set({ isOpen: true, content, data }),
   closeDrawer: () => set({ isOpen: false, content: null, data: null }),
+}));
+
+// ─── Trade Store ───
+
+interface TradeState {
+  trades: Trade[];
+  addTrade: (trade: Trade) => void;
+  updateTrade: (id: string, updated: Partial<Trade>) => void;
+  deleteTrade: (id: string) => void;
+}
+
+export const useTradeStore = create<TradeState>((set) => ({
+  trades: mockTrades,
+  addTrade: (newTrade) =>
+    set((state) => ({ trades: [newTrade, ...state.trades] })),
+  updateTrade: (id, updated) =>
+    set((state) => ({
+      trades: state.trades.map((t) =>
+        t.id === id ? { ...t, ...updated } : t
+      ),
+    })),
+  deleteTrade: (id) =>
+    set((state) => ({
+      trades: state.trades.filter((t) => t.id !== id),
+    })),
 }));

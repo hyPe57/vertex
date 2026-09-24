@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Trade } from "@/types";
 import { Drawer, Button, Input, Select, Badge } from "@/components/ui";
 import { calculateRR, getEmotionColor } from "@/lib/utils";
-import { X, Image as ImageIcon } from "lucide-react";
+import { X, Image as ImageIcon, UploadCloud, Plus } from "lucide-react";
 
 interface EditDrawerProps {
   isOpen: boolean;
@@ -15,6 +15,30 @@ interface EditDrawerProps {
 
 export function EditDrawer({ isOpen, onClose, trade, onSave }: EditDrawerProps) {
   const [formData, setFormData] = useState<Partial<Trade>>({});
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAddFiles = (files: FileList) => {
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        setFormData((prev) => ({
+          ...prev,
+          images: [
+            ...(prev.images || []),
+            {
+              id: `img-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              imageUrl: dataUrl,
+              thumbnailUrl: dataUrl,
+              caption: file.name,
+            },
+          ],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
 
   useEffect(() => {
     if (trade) {
@@ -170,24 +194,69 @@ export function EditDrawer({ isOpen, onClose, trade, onSave }: EditDrawerProps) 
         </div>
 
         {/* Images */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-medium text-[var(--text-secondary)]">Images</label>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-[var(--text-secondary)]">Images & Chart Screenshots</label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-medium transition-colors cursor-pointer"
+            >
+              <Plus size={12} />
+              <span>Add Image</span>
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) handleAddFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+
           {formData.images && formData.images.length > 0 ? (
             <div className="grid grid-cols-2 gap-2">
               {formData.images.map((img) => (
-                <div key={img.id} className="relative group rounded-lg overflow-hidden border border-[var(--border-primary)] aspect-video bg-surface-100">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <ImageIcon className="h-6 w-6 text-[var(--text-tertiary)]" />
-                  </div>
-                  <button className="absolute top-1 right-1 p-1 bg-black/50 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-loss">
+                <div
+                  key={img.id}
+                  className="relative group rounded-lg overflow-hidden border border-white/10 aspect-video bg-black/40 flex items-center justify-center"
+                >
+                  {img.imageUrl ? (
+                    <img
+                      src={img.imageUrl}
+                      alt={img.caption || "Chart"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-neutral-500" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        images: prev.images?.filter((i) => i.id !== img.id),
+                      }));
+                    }}
+                    className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-rose-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                  >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-20 rounded-lg border border-dashed border-[var(--border-primary)] text-[var(--text-tertiary)] text-xs">
-              No images attached
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="flex flex-col items-center justify-center gap-1.5 h-20 rounded-xl border border-dashed border-white/10 hover:border-white/20 bg-white/[0.015] hover:bg-white/[0.03] text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer text-xs"
+            >
+              <UploadCloud size={16} className="opacity-60" />
+              <span>Click to attach chart screenshot</span>
             </div>
           )}
         </div>
