@@ -2,10 +2,11 @@
 
 import { useMemo } from "react";
 import type { Trade } from "@/types";
-import { cn } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
+import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 export function LongShortComparison({ trades }: { trades: Trade[] }) {
-  const { long, short } = useMemo(() => {
+  const { long, short, totalCount } = useMemo(() => {
     const longTrades = trades.filter((t) => t.direction === "long");
     const shortTrades = trades.filter((t) => t.direction === "short");
 
@@ -19,75 +20,120 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
       return { count: arr.length, wins: wins.length, winRate, totalPnl, avgPnl, avgRR, avgWin };
     }
 
-    return { long: calc(longTrades), short: calc(shortTrades) };
+    return {
+      long: calc(longTrades),
+      short: calc(shortTrades),
+      totalCount: trades.length,
+    };
   }, [trades]);
 
-  const maxPnl = Math.max(Math.abs(long.totalPnl), Math.abs(short.totalPnl), 1);
-
-  function StatRow({ label, longVal, shortVal, isCurrency }: { label: string; longVal: number; shortVal: number; isCurrency?: boolean }) {
-    const fmt = (v: number) =>
-      isCurrency
-        ? `${v >= 0 ? "+" : "-"}$${Math.abs(v).toFixed(0)}`
-        : typeof v === "number" && label.includes("%")
-        ? `${v.toFixed(1)}%`
-        : v.toFixed(label.includes("RR") ? 2 : 0);
-
-    return (
-      <div className="flex items-center justify-between text-[11px] py-1.5">
-        <span className="font-mono font-medium text-emerald-400">{fmt(longVal)}</span>
-        <span className="text-neutral-500 text-[10px] font-medium uppercase tracking-wider">{label}</span>
-        <span className="font-mono font-medium text-rose-400">{fmt(shortVal)}</span>
-      </div>
-    );
-  }
+  const longPercent = totalCount > 0 ? (long.count / totalCount) * 100 : 50;
+  const shortPercent = totalCount > 0 ? (short.count / totalCount) * 100 : 50;
 
   return (
-    <div className="bg-[#0c0d14]/75 backdrop-blur-md rounded-2xl p-5 border border-white/[0.04] h-full">
-      <h3 className="text-sm font-semibold text-neutral-100 tracking-tight mb-4">
-        Long vs Short Edge
-      </h3>
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs font-medium text-neutral-400">Directional Bias & Edge</span>
+        <span className="text-[10px] text-neutral-400 font-mono">
+          {long.count} Long / {short.count} Short
+        </span>
+      </div>
 
-      {/* Direction Headers */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-400" />
-          <span className="text-xs font-semibold text-emerald-400">LONG</span>
-          <span className="text-[10px] text-neutral-500 ml-1">{long.count} trades</span>
+      {/* Visual Split Ratio Bar */}
+      <div className="space-y-1.5 mb-6">
+        <div className="h-2 w-full bg-white/[0.03] rounded-full overflow-hidden flex gap-1 p-0.5">
+          <div
+            className="h-full rounded-full bg-emerald-500/80 transition-all duration-500"
+            style={{ width: `${longPercent}%` }}
+          />
+          <div
+            className="h-full rounded-full bg-rose-500/80 transition-all duration-500"
+            style={{ width: `${shortPercent}%` }}
+          />
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-neutral-500 mr-1">{short.count} trades</span>
-          <span className="text-xs font-semibold text-rose-400">SHORT</span>
-          <div className="w-2 h-2 rounded-full bg-rose-400" />
+        <div className="flex justify-between text-[10px] font-mono">
+          <span className="text-emerald-400 flex items-center gap-0.5">
+            <ArrowUpRight size={10} /> Long ({longPercent.toFixed(0)}%)
+          </span>
+          <span className="text-rose-400 flex items-center gap-0.5">
+            <ArrowDownRight size={10} /> Short ({shortPercent.toFixed(0)}%)
+          </span>
         </div>
       </div>
 
-      {/* PnL Visual Bar */}
-      <div className="flex gap-1 mb-4 h-3">
-        <div
-          className="rounded-l-full transition-all"
-          style={{
-            width: `${Math.max((Math.abs(long.totalPnl) / maxPnl) * 50, 4)}%`,
-            backgroundColor: long.totalPnl >= 0 ? "#22c55e" : "#ef4444",
-            opacity: 0.7,
-          }}
-        />
-        <div
-          className="rounded-r-full transition-all"
-          style={{
-            width: `${Math.max((Math.abs(short.totalPnl) / maxPnl) * 50, 4)}%`,
-            backgroundColor: short.totalPnl >= 0 ? "#22c55e" : "#ef4444",
-            opacity: 0.7,
-          }}
-        />
-      </div>
+      {/* Side-by-side Dual Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Long Side */}
+        <div className="p-4 rounded-xl bg-emerald-500/[0.03] border border-emerald-500/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold tracking-wider text-emerald-400 uppercase">
+              Long Trades
+            </span>
+            <span className="text-[10px] text-neutral-400 font-mono">{long.count} trades</span>
+          </div>
 
-      {/* Stats Rows */}
-      <div className="divide-y divide-white/[0.03]">
-        <StatRow label="Win Rate %" longVal={long.winRate} shortVal={short.winRate} />
-        <StatRow label="Total PnL" longVal={long.totalPnl} shortVal={short.totalPnl} isCurrency />
-        <StatRow label="Avg PnL" longVal={long.avgPnl} shortVal={short.avgPnl} isCurrency />
-        <StatRow label="Avg Win" longVal={long.avgWin} shortVal={short.avgWin} isCurrency />
-        <StatRow label="Avg RR" longVal={long.avgRR} shortVal={short.avgRR} />
+          <div>
+            <div className="text-lg font-bold font-mono text-emerald-400">
+              {long.totalPnl >= 0 ? "+" : ""}
+              {formatCurrency(long.totalPnl)}
+            </div>
+            <div className="text-[10px] text-neutral-400 mt-0.5">Total Return</div>
+          </div>
+
+          <div className="pt-2 border-t border-emerald-500/10 space-y-1.5 text-[11px] font-mono">
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Win Rate</span>
+              <span className="text-neutral-200">{long.winRate.toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Avg Trade</span>
+              <span className={long.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                {long.avgPnl >= 0 ? "+" : ""}
+                {formatCurrency(long.avgPnl)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Avg R:R</span>
+              <span className="text-neutral-200">{long.avgRR.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Short Side */}
+        <div className="p-4 rounded-xl bg-rose-500/[0.03] border border-rose-500/10 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold tracking-wider text-rose-400 uppercase">
+              Short Trades
+            </span>
+            <span className="text-[10px] text-neutral-400 font-mono">{short.count} trades</span>
+          </div>
+
+          <div>
+            <div className="text-lg font-bold font-mono text-rose-400">
+              {short.totalPnl >= 0 ? "+" : ""}
+              {formatCurrency(short.totalPnl)}
+            </div>
+            <div className="text-[10px] text-neutral-400 mt-0.5">Total Return</div>
+          </div>
+
+          <div className="pt-2 border-t border-rose-500/10 space-y-1.5 text-[11px] font-mono">
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Win Rate</span>
+              <span className="text-neutral-200">{short.winRate.toFixed(1)}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Avg Trade</span>
+              <span className={short.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
+                {short.avgPnl >= 0 ? "+" : ""}
+                {formatCurrency(short.avgPnl)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-neutral-400">Avg R:R</span>
+              <span className="text-neutral-200">{short.avgRR.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
