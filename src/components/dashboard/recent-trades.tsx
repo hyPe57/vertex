@@ -45,13 +45,13 @@ export function RecentTradesCard() {
               <div className="flex items-center gap-2.5">
                 <span
                   className={cn(
-                    "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md border tabular-nums",
+                    "inline-flex items-center justify-center rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase shrink-0 min-w-[50px] text-center",
                     trade.direction === "long"
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                      : "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                      ? "bg-profit/10 text-profit"
+                      : "bg-loss/10 text-loss"
                   )}
                 >
-                  {trade.direction}
+                  {trade.direction.toUpperCase()}
                 </span>
                 <div className="flex flex-col">
                   <span className="text-xs font-semibold text-neutral-200 group-hover:text-white transition-colors">
