@@ -201,39 +201,61 @@ export function ConnectPortModal() {
               </div>
             </div>
 
-            {/* Balances Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 mb-1.5 block">
+            {/* Balances Row with Presets */}
+            <div className="space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400">
                   เงินทุนเริ่มต้น ($ Initial Balance)
                 </label>
-                <input
-                  type="number"
-                  value={initialBalance}
-                  onChange={(e) => {
-                    setInitialBalance(e.target.value);
-                    if (!currentBalance || currentBalance === initialBalance) {
-                      setCurrentBalance(e.target.value);
-                    }
-                  }}
-                  placeholder="10000"
-                  step="any"
-                  className="w-full h-9 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors font-mono"
-                />
+                <div className="flex items-center gap-1 flex-wrap">
+                  {[5000, 10000, 25000, 50000, 100000, 200000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      onClick={() => {
+                        setInitialBalance(amt.toString());
+                        setCurrentBalance(amt.toString());
+                      }}
+                      className={cn(
+                        "px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer",
+                        initialBalance === amt.toString()
+                          ? "bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30"
+                          : "bg-white/[0.03] text-neutral-400 hover:text-white hover:bg-white/[0.06]"
+                      )}
+                    >
+                      ${amt >= 1000 ? `${amt / 1000}k` : amt}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-neutral-400 mb-1.5 block">
-                  ยอดเงินปัจจุบัน ($ Current Balance)
-                </label>
-                <input
-                  type="number"
-                  value={currentBalance}
-                  onChange={(e) => setCurrentBalance(e.target.value)}
-                  placeholder="10000"
-                  step="any"
-                  className="w-full h-9 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors font-mono"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input
+                    type="number"
+                    value={initialBalance}
+                    onChange={(e) => {
+                      setInitialBalance(e.target.value);
+                      if (!currentBalance || currentBalance === initialBalance) {
+                        setCurrentBalance(e.target.value);
+                      }
+                    }}
+                    placeholder="10000"
+                    step="any"
+                    className="w-full h-9 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors font-mono"
+                  />
+                </div>
+
+                <div>
+                  <input
+                    type="number"
+                    value={currentBalance}
+                    onChange={(e) => setCurrentBalance(e.target.value)}
+                    placeholder="10000"
+                    step="any"
+                    className="w-full h-9 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-white/20 transition-colors font-mono"
+                  />
+                </div>
               </div>
             </div>
 

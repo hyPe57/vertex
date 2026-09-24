@@ -60,6 +60,10 @@ interface PortState {
   togglePortSelector: () => void;
   isAddModalOpen: boolean;
   setIsAddModalOpen: (open: boolean) => void;
+  editingPort: Port | null;
+  setEditingPort: (port: Port | null) => void;
+  isEditModalOpen: boolean;
+  setIsEditModalOpen: (open: boolean) => void;
 }
 
 export const usePortStore = create<PortState>((set) => ({
@@ -126,6 +130,10 @@ export const usePortStore = create<PortState>((set) => ({
     set((state) => ({ portSelectorOpen: !state.portSelectorOpen })),
   isAddModalOpen: false,
   setIsAddModalOpen: (open) => set({ isAddModalOpen: open }),
+  editingPort: null,
+  setEditingPort: (port) => set({ editingPort: port, isEditModalOpen: !!port }),
+  isEditModalOpen: false,
+  setIsEditModalOpen: (open) => set({ isEditModalOpen: open, editingPort: open ? null : null }),
 }));
 
 // ─── Drawer Store ───
