@@ -85,15 +85,6 @@ export function ControlPanel() {
     return { pipUnit: p, multiplier: m };
   }, [asset]);
 
-  // Automatic playback timer
-  useEffect(() => {
-    if (!isPlaying) return;
-    const intervalMs = Math.max(150, 1000 / playSpeed);
-    const timer = setInterval(() => {
-      stepForward();
-    }, intervalMs);
-    return () => clearInterval(timer);
-  }, [isPlaying, playSpeed, stepForward]);
 
   // Risk / Reward calculations preview for Buy direction
   const { estimatedRisk, estimatedReward, calculatedRR } = useMemo(() => {

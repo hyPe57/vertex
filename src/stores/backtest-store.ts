@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { REAL_MARKET_SEEDS } from "@/lib/real-market-seeds";
 
 export interface BacktestCandle {
   time: number; // Unix timestamp in seconds (UTCTimestamp)
@@ -68,79 +69,6 @@ export function getTimeframeInterval(tf: string): number {
     default:
       return 900;
   }
-}
-
-export function getTimeframeVolatility(tf: string): { scale: number; wavePeriod: number } {
-  switch (tf) {
-    case "1m":
-      return { scale: 0.35, wavePeriod: 8 };
-    case "5m":
-      return { scale: 0.65, wavePeriod: 12 };
-    case "15m":
-      return { scale: 1.0, wavePeriod: 18 };
-    case "1H":
-      return { scale: 2.2, wavePeriod: 26 };
-    case "4H":
-      return { scale: 4.5, wavePeriod: 36 };
-    case "1D":
-      return { scale: 8.5, wavePeriod: 48 };
-    default:
-      return { scale: 1.0, wavePeriod: 18 };
-  }
-}
-
-// Generate realistic candlestick data with strictly ascending timestamps tailored to timeframe
-function generateDataset(asset: string, timeframe = "15m", count = 300): BacktestCandle[] {
-  let basePrice = 2350.0; // XAUUSD
-  let baseVolatility = 2.2;
-
-  if (asset === "EURUSD") {
-    basePrice = 1.085;
-    baseVolatility = 0.0009;
-  } else if (asset === "BTCUSD") {
-    basePrice = 64200.0;
-    baseVolatility = 220.0;
-  } else if (asset === "NAS100") {
-    basePrice = 18250.0;
-    baseVolatility = 28.0;
-  }
-
-  const intervalSeconds = getTimeframeInterval(timeframe);
-  const { scale, wavePeriod } = getTimeframeVolatility(timeframe);
-  const volatility = baseVolatility * scale;
-
-  const candles: BacktestCandle[] = [];
-  let currentClose = basePrice;
-  // Start from past time so current candles are up to date
-  const startTime = Math.floor(Date.now() / 1000) - count * intervalSeconds;
-
-  for (let i = 0; i < count; i++) {
-    const time = startTime + i * intervalSeconds;
-    // Market cycle simulation: trend + wave oscillations + noise
-    const trend =
-      Math.sin(i / wavePeriod) * (volatility * 0.5) +
-      Math.cos(i / (wavePeriod * 0.6)) * (volatility * 0.25);
-    const noise = (Math.random() - 0.49) * volatility;
-    const change = trend + noise;
-    const open = currentClose;
-    const close = Math.max(open + change, basePrice * 0.3);
-    const high = Math.max(open, close) + Math.random() * volatility * 0.55;
-    const low = Math.min(open, close) - Math.random() * volatility * 0.55;
-    const volume = Math.floor(Math.random() * 800) + 150;
-
-    const decimals = asset === "EURUSD" ? 4 : 2;
-    candles.push({
-      time,
-      open: Number(open.toFixed(decimals)),
-      high: Number(high.toFixed(decimals)),
-      low: Number(low.toFixed(decimals)),
-      close: Number(close.toFixed(decimals)),
-      volume,
-    });
-    currentClose = close;
-  }
-
-  return candles;
 }
 
 // Multipliers for P&L calculations
@@ -221,8 +149,8 @@ interface BacktestState {
 
 export const useBacktestStore = create<BacktestState>((set, get) => {
   const initialAsset = "XAUUSD";
-  const initialCandles = generateDataset(initialAsset, "15m", 300);
-  const startReveal = 100;
+  const initialCandles = REAL_MARKET_SEEDS[initialAsset] || [];
+  const startReveal = Math.floor(initialCandles.length * 0.55);
 
   return {
     asset: initialAsset,
@@ -276,7 +204,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
       },
     ],
 
-    dataSource: "Real Market (Yahoo Finance)",
+    dataSource: "Real Historical Data (Yahoo Finance)",
     isLoadingData: false,
 
     fetchMarketCandles: async (targetAsset, targetTf) => {
@@ -292,7 +220,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         if (json.success && Array.isArray(json.candles) && json.candles.length > 0) {
           const visibleIndex = Math.min(
             json.candles.length - 1,
-            Math.max(40, Math.floor(json.candles.length * 0.55))
+            Math.max(30, Math.floor(json.candles.length * 0.55))
           );
           set({
             asset,
@@ -307,17 +235,18 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
           return;
         }
       } catch (err) {
-        console.warn("API fetch failed, falling back to simulation:", err);
+        console.warn("API fetch failed, using real market seed fallback:", err);
       }
 
-      // Fallback
-      const fallbackCandles = generateDataset(asset, tf, 300);
+      // Offline / network failure fallback: Always use real historical seeds
+      const fallbackCandles = REAL_MARKET_SEEDS[asset] || REAL_MARKET_SEEDS["XAUUSD"] || [];
+      const visibleIndex = Math.floor(fallbackCandles.length * 0.55);
       set({
         asset,
         timeframe: tf,
         candles: fallbackCandles,
-        visibleIndex: 120,
-        dataSource: "Simulation (Offline Fallback)",
+        visibleIndex,
+        dataSource: "Real Historical Data (Offline)",
         isLoadingData: false,
         activePosition: null,
         isPlaying: false,
@@ -326,29 +255,38 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     setAsset: (newAsset) => {
       const state = get();
-      // Provide immediate fallback dataset so chart updates synchronously with zero lag
-      const immediateCandles = generateDataset(newAsset, state.timeframe, 300);
-      set({
-        asset: newAsset,
-        candles: immediateCandles,
-        visibleIndex: 120,
-        activePosition: null,
-        isPlaying: false,
-        customSlPrice: "",
-        customTpPrice: "",
-        isLoadingData: true,
-      });
+      if (newAsset === state.asset) return;
+      const seed = REAL_MARKET_SEEDS[newAsset];
+      if (seed && seed.length > 0) {
+        set({
+          asset: newAsset,
+          candles: seed,
+          visibleIndex: Math.floor(seed.length * 0.55),
+          activePosition: null,
+          isPlaying: false,
+          customSlPrice: "",
+          customTpPrice: "",
+          isLoadingData: true,
+          dataSource: "Real Historical Data",
+        });
+      } else {
+        set({
+          asset: newAsset,
+          activePosition: null,
+          isPlaying: false,
+          customSlPrice: "",
+          customTpPrice: "",
+          isLoadingData: true,
+        });
+      }
       get().fetchMarketCandles(newAsset, state.timeframe);
     },
 
     setTimeframe: (tf) => {
       const state = get();
-      // Provide immediate fallback dataset for new timeframe
-      const immediateCandles = generateDataset(state.asset, tf, 300);
+      if (tf === state.timeframe) return;
       set({
         timeframe: tf,
-        candles: immediateCandles,
-        visibleIndex: 120,
         activePosition: null,
         isPlaying: false,
         isLoadingData: true,
@@ -371,42 +309,23 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     stepForward: () => {
       const state = get();
-      let nextIndex = state.visibleIndex + 1;
-      let candles = [...state.candles];
+      const nextIndex = state.visibleIndex + 1;
 
-      // If approaching dataset end, dynamically generate more continuous bars
-      if (nextIndex >= candles.length) {
-        const last = candles[candles.length - 1];
-        const baseVolatility =
-          state.asset === "EURUSD" ? 0.0009 : state.asset === "BTCUSD" ? 220 : 2.2;
-        const { scale } = getTimeframeVolatility(state.timeframe);
-        const volatility = baseVolatility * scale;
-        const intervalSeconds = getTimeframeInterval(state.timeframe);
-
-        const change = (Math.random() - 0.49) * volatility;
-        const open = last.close;
-        const close = open + change;
-        const high = Math.max(open, close) + Math.random() * volatility * 0.5;
-        const low = Math.min(open, close) - Math.random() * volatility * 0.5;
-        const decimals = state.asset === "EURUSD" ? 4 : 2;
-
-        candles.push({
-          time: last.time + intervalSeconds,
-          open: Number(open.toFixed(decimals)),
-          high: Number(high.toFixed(decimals)),
-          low: Number(low.toFixed(decimals)),
-          close: Number(close.toFixed(decimals)),
-          volume: Math.floor(Math.random() * 800) + 150,
-        });
+      // Real historical data boundary check: Stop cleanly at the end
+      if (nextIndex >= state.candles.length) {
+        set({ isPlaying: false });
+        return;
       }
 
-      const currentCandle = candles[nextIndex];
+      const currentCandle = state.candles[nextIndex];
+      if (!currentCandle) return;
+
       let activePos = state.activePosition;
       let newBalance = state.balance;
       let newClosedTrades = [...state.closedTrades];
 
       // Process live position
-      if (activePos && currentCandle) {
+      if (activePos) {
         const multiplier = getAssetMultiplier(state.asset);
 
         // Check Take Profit trigger
@@ -478,8 +397,8 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         ? Number((newBalance + activePos.pnl).toFixed(2))
         : newBalance;
 
+      // Keep candles array reference intact to prevent chart re-mounting
       set({
-        candles,
         visibleIndex: nextIndex,
         activePosition: activePos,
         balance: newBalance,
@@ -490,10 +409,12 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
     resetSimulation: () => {
       const state = get();
-      const freshCandles = generateDataset(state.asset, state.timeframe, 300);
+      const resetIndex = Math.min(
+        state.candles.length - 1,
+        Math.max(30, Math.floor(state.candles.length * 0.55))
+      );
       set({
-        candles: freshCandles,
-        visibleIndex: 120,
+        visibleIndex: resetIndex,
         activePosition: null,
         isPlaying: false,
         balance: state.startingBalance,

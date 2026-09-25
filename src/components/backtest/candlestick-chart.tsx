@@ -108,6 +108,7 @@ export function CandlestickChart() {
         rightOffset: 12,
         barSpacing: 11,
         minBarSpacing: 1.5,
+        shiftVisibleRangeOnNewBar: false,
       },
       handleScroll: {
         mouseWheel: true,
@@ -223,11 +224,13 @@ export function CandlestickChart() {
       }));
       series.setData(slice);
 
-      // Reset autoScale and fit content so new price range (e.g. $84k vs $2650 vs $1.08) is centered
-      chart.timeScale().fitContent();
-      try {
-        chart.priceScale("right").applyOptions({ autoScale: true });
-      } catch (_) {}
+      // Only auto-center/fit when explicitly switching to a different asset or timeframe
+      if (assetChanged || timeframeChanged || lastCandlesRef.current.length === 0) {
+        chart.timeScale().fitContent();
+        try {
+          chart.priceScale("right").applyOptions({ autoScale: true });
+        } catch (_) {}
+      }
 
       lastAssetRef.current = asset;
       lastTimeframeRef.current = timeframe;
