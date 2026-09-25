@@ -24,6 +24,25 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+function getTimeframeDefaultBarSpacing(tf: string): number {
+  switch (tf) {
+    case "1m":
+      return 4.5; // Denser candles for 1-minute chart
+    case "5m":
+      return 6.5;
+    case "15m":
+      return 8.5;
+    case "1H":
+      return 10.5;
+    case "4H":
+      return 12;
+    case "1D":
+      return 14;
+    default:
+      return 8.5;
+  }
+}
+
 export function CandlestickChart() {
   const {
     candles,
@@ -106,7 +125,7 @@ export function CandlestickChart() {
         timeVisible: true,
         secondsVisible: false,
         rightOffset: 12,
-        barSpacing: 11,
+        barSpacing: getTimeframeDefaultBarSpacing(timeframe),
         minBarSpacing: 1.5,
         shiftVisibleRangeOnNewBar: false,
       },
@@ -226,7 +245,16 @@ export function CandlestickChart() {
 
       // Only auto-center/fit when explicitly switching to a different asset or timeframe
       if (assetChanged || timeframeChanged || lastCandlesRef.current.length === 0) {
-        chart.timeScale().fitContent();
+        if (timeframeChanged) {
+          chart.timeScale().applyOptions({
+            barSpacing: getTimeframeDefaultBarSpacing(timeframe),
+          });
+        }
+        if (slice.length > 80) {
+          chart.timeScale().scrollToPosition(0, false);
+        } else {
+          chart.timeScale().fitContent();
+        }
         try {
           chart.priceScale("right").applyOptions({ autoScale: true });
         } catch (_) {}

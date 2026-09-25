@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (asset === "BTCUSD") {
       // ─── Binance Public API for Crypto ───
       const binanceInterval = mapToBinanceInterval(timeframe);
-      const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${binanceInterval}&limit=500`;
+      const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${binanceInterval}&limit=1000`;
       const res = await fetch(url, { next: { revalidate: 60 } });
       if (!res.ok) throw new Error(`Binance error: ${res.statusText}`);
       const raw = await res.json();
@@ -176,11 +176,11 @@ function mapToYahooConfig(tf: string): {
 } {
   switch (tf) {
     case "1m":
-      return { interval: "1m", range: "1d" };
+      return { interval: "1m", range: "7d" };
     case "5m":
-      return { interval: "5m", range: "5d" };
+      return { interval: "5m", range: "7d" };
     case "15m":
-      return { interval: "15m", range: "5d" };
+      return { interval: "15m", range: "7d" };
     case "1H":
       return { interval: "1h", range: "1mo" };
     case "4H":
@@ -189,7 +189,7 @@ function mapToYahooConfig(tf: string): {
     case "1D":
       return { interval: "1d", range: "1y" };
     default:
-      return { interval: "15m", range: "5d" };
+      return { interval: "15m", range: "7d" };
   }
 }
 

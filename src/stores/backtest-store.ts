@@ -116,7 +116,7 @@ interface BacktestState {
   isLoadingData: boolean;
 
   // Actions
-  fetchMarketCandles: (asset?: string, timeframe?: string) => Promise<void>;
+  fetchMarketCandles: (asset?: string, timeframe?: string, targetTimestamp?: number) => Promise<void>;
   setAsset: (asset: string) => void;
   setTimeframe: (tf: string) => void;
   setLotSize: (lot: number) => void;
@@ -207,10 +207,12 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
     dataSource: "Real Historical Data (Yahoo Finance)",
     isLoadingData: false,
 
-    fetchMarketCandles: async (targetAsset, targetTf) => {
+    fetchMarketCandles: async (targetAsset, targetTf, targetTimestamp) => {
       const state = get();
       const asset = targetAsset || state.asset;
       const tf = targetTf || state.timeframe;
+      // Sync to current replay timestamp if available so switching timeframe keeps the exact same time
+      const syncTimestamp = targetTimestamp ?? state.candles[state.visibleIndex]?.time;
       set({ isLoadingData: true });
 
       try {
@@ -218,10 +220,42 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         if (!res.ok) throw new Error("API error");
         const json = await res.json();
         if (json.success && Array.isArray(json.candles) && json.candles.length > 0) {
-          const visibleIndex = Math.min(
-            json.candles.length - 1,
-            Math.max(30, Math.floor(json.candles.length * 0.55))
-          );
+          // Synchronize to the matching candle <= syncTimestamp
+          let visibleIndex = -1;
+          if (syncTimestamp) {
+            for (let i = json.candles.length - 1; i >= 0; i--) {
+              if (json.candles[i].time <= syncTimestamp) {
+                visibleIndex = i;
+                break;
+              }
+            }
+          }
+          if (visibleIndex === -1) {
+            visibleIndex = Math.min(
+              json.candles.length - 1,
+              Math.max(30, Math.floor(json.candles.length * 0.55))
+            );
+          }
+
+          // Preserve active trade position across timeframes, updating current floating PnL
+          let activePos = state.activePosition;
+          if (activePos && json.candles[visibleIndex]) {
+            const currentCandle = json.candles[visibleIndex];
+            const multiplier = getAssetMultiplier(asset);
+            const priceDiff =
+              activePos.direction === "buy"
+                ? currentCandle.close - activePos.entryPrice
+                : activePos.entryPrice - currentCandle.close;
+            const floatingPnl = Number((priceDiff * activePos.lotSize * multiplier).toFixed(2));
+            const pnlPct = Number(((floatingPnl / state.balance) * 100).toFixed(2));
+            activePos = {
+              ...activePos,
+              currentPrice: currentCandle.close,
+              pnl: floatingPnl,
+              pnlPercent: pnlPct,
+            };
+          }
+
           set({
             asset,
             timeframe: tf,
@@ -229,7 +263,7 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
             visibleIndex,
             dataSource: json.source || "Real Historical Data",
             isLoadingData: false,
-            activePosition: null,
+            activePosition: activePos,
             isPlaying: false,
           });
           return;
@@ -240,7 +274,19 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
 
       // Offline / network failure fallback: Always use real historical seeds
       const fallbackCandles = REAL_MARKET_SEEDS[asset] || REAL_MARKET_SEEDS["XAUUSD"] || [];
-      const visibleIndex = Math.floor(fallbackCandles.length * 0.55);
+      let visibleIndex = -1;
+      if (syncTimestamp) {
+        for (let i = fallbackCandles.length - 1; i >= 0; i--) {
+          if (fallbackCandles[i].time <= syncTimestamp) {
+            visibleIndex = i;
+            break;
+          }
+        }
+      }
+      if (visibleIndex === -1) {
+        visibleIndex = Math.floor(fallbackCandles.length * 0.55);
+      }
+
       set({
         asset,
         timeframe: tf,
@@ -248,7 +294,6 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
         visibleIndex,
         dataSource: "Real Historical Data (Offline)",
         isLoadingData: false,
-        activePosition: null,
         isPlaying: false,
       });
     },
@@ -285,13 +330,16 @@ export const useBacktestStore = create<BacktestState>((set, get) => {
     setTimeframe: (tf) => {
       const state = get();
       if (tf === state.timeframe) return;
+      // Capture the current replay candle timestamp before switching
+      const currentCandle = state.candles[state.visibleIndex];
+      const currentTimestamp = currentCandle ? currentCandle.time : undefined;
+
       set({
         timeframe: tf,
-        activePosition: null,
         isPlaying: false,
         isLoadingData: true,
       });
-      get().fetchMarketCandles(state.asset, tf);
+      get().fetchMarketCandles(state.asset, tf, currentTimestamp);
     },
     setLotSize: (lot) => set({ lotSize: lot }),
     setSpreadPips: (spreadPips) => set({ spreadPips }),
