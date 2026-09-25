@@ -37,8 +37,8 @@ export function ImageGrid({ trades }: ImageGridProps) {
 
   return (
     <>
-      {/* Large Grid: 1 col on mobile, 2 cols on tablet, 3 cols on desktop for large screenshot display */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* 5 Columns Grid: Clean edge-to-edge layout */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5 2xl:grid-cols-5 gap-3.5">
         {trades.map((trade) => (
           <GlassCard
             key={trade.id}

@@ -29,7 +29,7 @@ export default function GalleryPage() {
   const uniqueAssets = Array.from(new Set(tradesWithImages.map((t) => t.asset)));
 
   return (
-    <div className="w-full max-w-[1500px] mx-auto px-4 lg:px-8 py-6 space-y-6">
+    <div className="w-full px-4 sm:px-6 lg:px-8 py-5 space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/[0.04]">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
