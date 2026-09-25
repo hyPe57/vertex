@@ -74,7 +74,6 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
 
           <div>
             <div className="text-lg font-bold font-mono text-emerald-400">
-              {long.totalPnl >= 0 ? "+" : ""}
               {formatCurrency(long.totalPnl)}
             </div>
             <div className="text-[10px] text-neutral-400 mt-0.5">Total Return</div>
@@ -88,7 +87,6 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
             <div className="flex justify-between">
               <span className="text-neutral-400">Avg Trade</span>
               <span className={long.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {long.avgPnl >= 0 ? "+" : ""}
                 {formatCurrency(long.avgPnl)}
               </span>
             </div>
@@ -110,7 +108,6 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
 
           <div>
             <div className="text-lg font-bold font-mono text-rose-400">
-              {short.totalPnl >= 0 ? "+" : ""}
               {formatCurrency(short.totalPnl)}
             </div>
             <div className="text-[10px] text-neutral-400 mt-0.5">Total Return</div>
@@ -124,7 +121,6 @@ export function LongShortComparison({ trades }: { trades: Trade[] }) {
             <div className="flex justify-between">
               <span className="text-neutral-400">Avg Trade</span>
               <span className={short.avgPnl >= 0 ? "text-emerald-400" : "text-rose-400"}>
-                {short.avgPnl >= 0 ? "+" : ""}
                 {formatCurrency(short.avgPnl)}
               </span>
             </div>
