@@ -208,7 +208,6 @@ export default function AnalyticsPage() {
               isNetPositive ? "text-emerald-400" : "text-rose-400"
             )}
           >
-            {isNetPositive ? "+" : ""}
             {formatCurrency(stats.netPnl)}
           </div>
           <div className="text-[10px] text-neutral-400 font-mono">
