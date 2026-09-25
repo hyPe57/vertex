@@ -85,7 +85,6 @@ export function DashboardCalendar() {
               monthPnl >= 0 ? "text-emerald-400" : "text-rose-400"
             }`}
           >
-            {monthPnl >= 0 ? "+" : ""}
             {formatCurrency(monthPnl)}
           </span>
         </div>

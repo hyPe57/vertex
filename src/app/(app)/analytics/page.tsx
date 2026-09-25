@@ -162,7 +162,7 @@ export default function AnalyticsPage() {
             {filteredTrades.length} trades analyzed · {stats.wins}W / {stats.losses}L · Win Rate{" "}
             <span className="text-white font-medium">{stats.winRate.toFixed(1)}%</span> · Net P&L{" "}
             <span className={cn("font-medium", isNetPositive ? "text-emerald-400" : "text-rose-400")}>
-              {isNetPositive ? "+" : ""}{formatCurrency(stats.netPnl)}
+              {formatCurrency(stats.netPnl)}
             </span>
           </p>
         </div>

@@ -333,7 +333,6 @@ export function PortSelector() {
                           )}
                         >
                           {isProfit ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                          {isProfit ? "+" : ""}
                           {formatCurrency(activePnl)} ({activePnlPct.toFixed(2)}%)
                         </div>
                       </div>
@@ -417,10 +416,9 @@ export function PortSelector() {
                                   pnl >= 0 ? "text-emerald-400" : "text-rose-400"
                                 )}
                               >
-                                {pnl >= 0 ? "+" : ""}
                                 {display === "usd"
-                                  ? formatCurrency(pnl, false)
-                                  : `${pnlPct.toFixed(2)}%`}
+                                  ? formatCurrency(pnl)
+                                  : `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(2)}%`}
                               </div>
                             </div>
 

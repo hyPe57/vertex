@@ -124,7 +124,6 @@ export function GlassCard({ trade, onClick, onDelete }: GlassCardProps) {
               isWin ? "text-emerald-400" : "text-rose-400"
             )}
           >
-            {isWin ? "+" : ""}
             {formatCurrency(trade.pnl)}
           </div>
         </div>

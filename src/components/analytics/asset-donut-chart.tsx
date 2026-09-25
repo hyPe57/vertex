@@ -35,7 +35,7 @@ const CustomTooltip = ({ active, payload }: any) => {
           <div className="flex justify-between text-neutral-400">
             <span>P&L:</span>
             <span className={cn("font-medium", data.pnl >= 0 ? "text-emerald-400" : "text-rose-400")}>
-              {data.pnl >= 0 ? "+" : ""}{formatCurrency(data.pnl)}
+              {formatCurrency(data.pnl)}
             </span>
           </div>
           <div className="flex justify-between text-neutral-400">
@@ -145,7 +145,7 @@ export function AssetDonutChart({ trades }: AssetDonutChartProps) {
                 item.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
               )}
             >
-              {item.pnl >= 0 ? "+" : ""}{formatCurrency(item.pnl)}
+              {formatCurrency(item.pnl)}
             </span>
           </div>
         ))}

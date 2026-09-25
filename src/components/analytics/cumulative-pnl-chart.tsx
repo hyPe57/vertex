@@ -38,7 +38,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <div className="flex justify-between items-center">
             <span className="text-neutral-400">Trade Result</span>
             <span className={cn("font-mono font-medium", data.tradePnl >= 0 ? "text-emerald-400/90" : "text-rose-400/90")}>
-              {data.tradePnl >= 0 ? "+" : ""}{formatCurrency(data.tradePnl)}
+              {formatCurrency(data.tradePnl)}
             </span>
           </div>
           <div className="flex justify-between items-center text-[10px] text-neutral-400 pt-1">

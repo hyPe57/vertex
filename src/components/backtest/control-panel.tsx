@@ -266,7 +266,6 @@ export function ControlPanel() {
                     activePosition.pnl >= 0 ? "text-emerald-400" : "text-rose-400"
                   )}
                 >
-                  {activePosition.pnl >= 0 ? "+" : ""}
                   {formatCurrency(activePosition.pnl)}
                 </div>
               </div>
@@ -559,11 +558,11 @@ export function ControlPanel() {
               {/* Estimated Risk / Reward Badge */}
               <div className="flex items-center justify-between p-2 rounded-lg bg-white/[0.01] border border-white/[0.03] text-[10px] font-mono">
                 <span className="text-rose-400 font-medium">
-                  Risk: -{formatCurrency(estimatedRisk)}
+                  Risk: -{formatCurrency(estimatedRisk, false)}
                 </span>
                 <span className="text-neutral-500 font-bold">1:{calculatedRR}</span>
                 <span className="text-emerald-400 font-medium">
-                  Reward: +{formatCurrency(estimatedReward)}
+                  Reward: {formatCurrency(estimatedReward)}
                 </span>
               </div>
             </div>
@@ -631,7 +630,6 @@ export function ControlPanel() {
                 isNetProfit ? "text-emerald-400" : "text-rose-400"
               )}
             >
-              {isNetProfit ? "+" : ""}
               {formatCurrency(sessionPnl)}
             </span>
           </div>

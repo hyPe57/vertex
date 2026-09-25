@@ -38,7 +38,7 @@ export function EquityCurveCard({
             {formatCurrency(activePort.currentBalance, false)}
           </span>
           <p className="text-[11px] font-medium tabular-nums text-emerald-400">
-            +{display === "usd" ? formatCurrency(pnl) : formatPercent(pnlPct)}
+            {display === "usd" ? formatCurrency(pnl) : formatPercent(pnlPct)}
           </p>
         </div>
       </div>

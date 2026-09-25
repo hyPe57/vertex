@@ -120,7 +120,6 @@ export function SessionTable() {
                       </td>
                       <td className="px-4 py-2.5 font-mono font-bold">
                         <span className={isProfit ? "text-emerald-400" : "text-rose-400"}>
-                          {isProfit ? "+" : ""}
                           {formatCurrency(t.pnl)}
                         </span>
                       </td>
@@ -169,7 +168,6 @@ export function SessionTable() {
                       <td className="px-4 py-2.5 font-mono text-neutral-200">{sess.winRate}%</td>
                       <td className="px-4 py-2.5 font-mono font-bold">
                         <span className={isProfitable ? "text-emerald-400" : "text-rose-400"}>
-                          {isProfitable ? "+" : ""}
                           {formatCurrency(sess.netPnl)}
                         </span>
                       </td>

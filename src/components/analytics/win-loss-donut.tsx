@@ -145,7 +145,7 @@ export function WinLossDonut({ trades }: WinLossDonutProps) {
             Gross Profit
           </span>
           <span className="text-sm font-bold font-mono text-emerald-400 mt-0.5">
-            +{formatCurrency(grossProfit)}
+            {formatCurrency(grossProfit)}
           </span>
         </div>
         <div className="p-2.5 rounded-xl bg-rose-500/[0.04] border border-rose-500/10 flex flex-col">
