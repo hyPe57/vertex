@@ -66,23 +66,11 @@ export function GlassCard({ trade, onClick, onDelete }: GlassCardProps) {
       {/* Subtle soft dark vignette overlay on hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 opacity-70 group-hover:opacity-90 transition-opacity pointer-events-none" />
 
-      {/* Top Bar: Asset Symbol + Direction Tag + Delete Icon */}
+      {/* Top Bar: Asset Symbol + Delete Icon */}
       <div className="relative z-10 p-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="font-mono font-bold text-[11px] text-white px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 shadow-xs">
-            {trade.asset}
-          </span>
-          <span
-            className={cn(
-              "text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md backdrop-blur-md border shadow-xs",
-              trade.direction === "long"
-                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                : "bg-rose-500/20 text-rose-400 border-rose-500/30"
-            )}
-          >
-            {trade.direction.toUpperCase()}
-          </span>
-        </div>
+        <span className="font-mono font-bold text-[11px] text-white px-2 py-0.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 shadow-xs">
+          {trade.asset}
+        </span>
 
         {/* Delete Image on Hover */}
         {onDelete && (
@@ -107,12 +95,7 @@ export function GlassCard({ trade, onClick, onDelete }: GlassCardProps) {
           </span>
         </div>
 
-        <div className="bg-black/75 backdrop-blur-md border border-white/10 rounded-lg px-2.5 py-1 flex items-center gap-1.5 shadow-md ml-auto">
-          {trade.riskReward ? (
-            <span className="text-[10px] text-neutral-400 font-mono font-medium">
-              1:{trade.riskReward}
-            </span>
-          ) : null}
+        <div className="bg-black/75 backdrop-blur-md border border-white/10 rounded-lg px-2.5 py-1 flex items-center shadow-md ml-auto">
           <span
             className={cn(
               "font-mono font-bold text-xs tracking-tight",
