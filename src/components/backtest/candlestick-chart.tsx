@@ -27,19 +27,19 @@ import { cn } from "@/lib/utils";
 function getTimeframeDefaultBarSpacing(tf: string): number {
   switch (tf) {
     case "1m":
-      return 4.5; // Denser candles for 1-minute chart
+      return 7.5; // Clear solid candle bodies with visible wicks
     case "5m":
-      return 6.5;
-    case "15m":
       return 8.5;
+    case "15m":
+      return 9.5;
     case "1H":
-      return 10.5;
+      return 11;
     case "4H":
       return 12;
     case "1D":
       return 14;
     default:
-      return 8.5;
+      return 9.5;
   }
 }
 
@@ -145,7 +145,9 @@ export function CandlestickChart() {
     const series = chart.addCandlestickSeries({
       upColor: "#10b981",
       downColor: "#f43f5e",
-      borderVisible: false,
+      borderVisible: true,
+      borderUpColor: "#10b981",
+      borderDownColor: "#f43f5e",
       wickUpColor: "#10b981",
       wickDownColor: "#f43f5e",
       priceFormat: {

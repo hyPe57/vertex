@@ -35,27 +35,42 @@ export async function GET(request: NextRequest) {
     let candles: ApiCandle[] = [];
     let source = "";
 
-    if (asset === "BTCUSD") {
-      // ─── Binance Public API for Crypto ───
+    if (asset === "BTCUSD" || asset === "EURUSD") {
+      // ─── Binance Public API for Crypto & FX (High Liquidity 24/7 Tick OHLC) ───
+      const symbol = asset === "BTCUSD" ? "BTCUSDT" : "EURUSDT";
       const binanceInterval = mapToBinanceInterval(timeframe);
-      const url = `https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=${binanceInterval}&limit=1000`;
+      const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceInterval}&limit=1000`;
       const res = await fetch(url, { next: { revalidate: 60 } });
       if (!res.ok) throw new Error(`Binance error: ${res.statusText}`);
       const raw = await res.json();
+      const decimals = asset === "EURUSD" ? 4 : 2;
 
-      candles = raw.map((item: (string | number)[]) => ({
-        time: Math.floor(Number(item[0]) / 1000),
-        open: Number(parseFloat(String(item[1])).toFixed(2)),
-        high: Number(parseFloat(String(item[2])).toFixed(2)),
-        low: Number(parseFloat(String(item[3])).toFixed(2)),
-        close: Number(parseFloat(String(item[4])).toFixed(2)),
-        volume: Math.floor(parseFloat(String(item[5]))),
-      }));
-      source = "Binance (BTCUSDT)";
+      candles = raw.map((item: (string | number)[]) => {
+        let open = Number(parseFloat(String(item[1])).toFixed(decimals));
+        let high = Number(parseFloat(String(item[2])).toFixed(decimals));
+        let low = Number(parseFloat(String(item[3])).toFixed(decimals));
+        let close = Number(parseFloat(String(item[4])).toFixed(decimals));
+
+        // If a low-volatility 1m bar has high === low, ensure minimal 1-pip wick so it never renders as a flat dash
+        if (high === low) {
+          const pip = asset === "EURUSD" ? 0.0001 : 0.01;
+          high = Number((high + pip).toFixed(decimals));
+          low = Number((low - pip).toFixed(decimals));
+        }
+
+        return {
+          time: Math.floor(Number(item[0]) / 1000),
+          open,
+          high,
+          low,
+          close,
+          volume: Math.floor(parseFloat(String(item[5]))),
+        };
+      });
+      source = `Binance (${symbol})`;
     } else {
-      // ─── Yahoo Finance API for Gold, Forex, and Indices ───
-      const yahooSymbol =
-        asset === "XAUUSD" ? "GC=F" : asset === "EURUSD" ? "EURUSD=X" : "NQ=F";
+      // ─── Yahoo Finance API for Gold and Indices ───
+      const yahooSymbol = asset === "XAUUSD" ? "GC=F" : "NQ=F";
       const { interval, range, aggregate4h } = mapToYahooConfig(timeframe);
 
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}?interval=${interval}&range=${range}`;
@@ -95,11 +110,19 @@ export async function GET(request: NextRequest) {
           close != null &&
           !isNaN(close)
         ) {
+          let h = Number(high.toFixed(decimals));
+          let l = Number(low.toFixed(decimals));
+          if (h === l) {
+            const spread = asset === "XAUUSD" ? 0.2 : 0.5;
+            h = Number((h + spread).toFixed(decimals));
+            l = Number((l - spread).toFixed(decimals));
+          }
+
           rawCandles.push({
             time,
             open: Number(open.toFixed(decimals)),
-            high: Number(high.toFixed(decimals)),
-            low: Number(low.toFixed(decimals)),
+            high: h,
+            low: l,
             close: Number(close.toFixed(decimals)),
             volume: Math.floor(volume),
           });
